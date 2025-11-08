@@ -2,8 +2,24 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { signInWithGoogle } from '@/lib/auth/client';
 
 export default function Login() {
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Get redirect URL from query params
+  const redirectTo = searchParams.get('redirect_to') || '/dashboard';
+  
+  // Check for error in URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
   const cursorRef = useRef<HTMLDivElement>(null);
   const cursorDotRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -167,13 +183,27 @@ export default function Login() {
             <p className="text-slate-600 text-lg">Welcome back! Sign in to continue</p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Google Sign In Button */}
           <button
-            onClick={() => {
-              // Handle Google sign in
-              window.location.href = '/dashboard';
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                setError(null);
+                await signInWithGoogle(redirectTo);
+              } catch (err: any) {
+                setError(err.message || 'Failed to sign in with Google');
+                setIsLoading(false);
+              }
             }}
-            className="group w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-slate-300 rounded-xl hover:border-teal-400 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] mb-4"
+            disabled={isLoading}
+            className="group w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-slate-300 rounded-xl hover:border-teal-400 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] mb-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path
@@ -194,7 +224,7 @@ export default function Login() {
               />
             </svg>
             <span className="text-slate-700 font-semibold text-base group-hover:text-teal-600 transition-colors">
-              Sign in with Google
+              {isLoading ? 'Signing in...' : 'Sign in with Google'}
             </span>
           </button>
 
@@ -210,11 +240,18 @@ export default function Login() {
 
           {/* Google Sign Up Button */}
           <button
-            onClick={() => {
-              // Handle Google sign up
-              window.location.href = '/dashboard';
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                setError(null);
+                await signInWithGoogle(redirectTo);
+              } catch (err: any) {
+                setError(err.message || 'Failed to sign up with Google');
+                setIsLoading(false);
+              }
             }}
-            className="group w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+            disabled={isLoading}
+            className="group w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path
@@ -234,7 +271,9 @@ export default function Login() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="font-semibold text-base">Sign up with Google</span>
+            <span className="font-semibold text-base">
+              {isLoading ? 'Signing up...' : 'Sign up with Google'}
+            </span>
           </button>
 
           {/* Back to home */}
