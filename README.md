@@ -13,7 +13,46 @@ Better ATS is a production-ready, multi-tenant SaaS platform that helps companie
 - **Public Careers Pages**: Beautiful, branded job listing pages for each company
 - **Advanced Analytics**: Real-time dashboards with hiring metrics and trends
 - **Customizable Workflows**: Configure departments, locations, and job types
-- **Modern Tech Stack**: Built with Next.js 15, TypeScript, and Tailwind CSS v4
+- **Production Database**: Supabase + Prisma for type-safe, scalable data management
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL via Supabase
+- **ORM**: Prisma (type-safe queries, migrations)
+- **Authentication**: Supabase Auth
+- **Real-time**: Supabase Real-time subscriptions
+- **Styling**: Tailwind CSS v4
+- **Icons**: Lucide React
+- **Charts**: Recharts
+- **AI**: Anthropic Claude API
+
+## 🏗️ Architecture
+
+### Database Stack (Prisma + Supabase)
+
+This project uses **both Prisma and Supabase** in a complementary way:
+
+**Prisma (Database ORM)**
+- Type-safe database queries
+- Complex relationships and joins
+- Database migrations
+- Automatic type generation
+
+**Supabase (Backend Services)**
+- User authentication
+- Real-time subscriptions
+- File storage
+- Row Level Security (RLS) policies
+
+**Both tools work together on the same PostgreSQL database without duplication.**
+
+### Multi-Tenancy
+
+Each company has a unique slug for their careers page:
+- `/jobs/demo-company` - Demo Company careers
+- `/jobs/techstart` - TechStart Inc careers
 
 ## 📁 Project Structure
 
@@ -25,19 +64,25 @@ For detailed information about the project structure, naming conventions, and de
 better-ats/
 ├── app/                    # Next.js App Router
 │   ├── dashboard/          # Protected dashboard (jobs, candidates, settings)
-│   └── jobs/               # Public careers pages
+│   ├── jobs/               # Public careers pages
+│   └── api/                # API routes
 ├── components/             # Shared components (layout, ui, landing)
-└── lib/                    # Utilities and configurations
+├── lib/
+│   ├── prisma.ts          # Prisma client with extensions
+│   ├── prisma/            # Prisma utilities (middleware, helpers)
+│   ├── repositories/      # Repository pattern for data access
+│   ├── services/          # Business logic layer
+│   ├── supabase/          # Supabase client/server setup
+│   ├── jobStore.ts        # localStorage job management (development)
+│   └── candidateStore.ts  # localStorage candidate management (development)
+├── prisma/
+│   ├── schema.prisma      # Database schema (source of truth)
+│   └── seed.ts           # Database seeding script
+└── supabase/
+    ├── setup.sql          # Complete Supabase setup
+    ├── policies/          # RLS policies per table
+    └── functions/         # Database triggers
 ```
-
-## 🛠️ Tech Stack
-
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **Icons**: Lucide React
-- **Charts**: Recharts
-- **Future**: Supabase (planned for production database)
 
 ## 🚀 Getting Started
 
@@ -45,14 +90,81 @@ better-ats/
 
 - Node.js 18+
 - npm or yarn
+- Supabase account ([supabase.com](https://supabase.com))
 
-### Installation
+### 1. Install Dependencies
 
 ```bash
-# Install dependencies
 npm install
+```
 
-# Run development server
+### 2. Set Up Supabase
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get your credentials from **Settings → API**:
+   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
+   - Anon/Public key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+# Supabase Configuration (for Auth, Storage, Real-time)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+
+# Prisma Database Connection (for type-safe queries)
+# IMPORTANT: Use DIRECT connection with SSL (port 5432)
+# Get from: Supabase Settings → Database → Connection string → URI
+# Format: postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres:your_password@db.your-project.supabase.co:5432/postgres?sslmode=require
+
+# Anthropic (Claude) API Configuration
+# Get from: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+**Getting the Database URL:**
+1. Go to Supabase Dashboard → **Settings** → **Database**
+2. Scroll to **Connection string**
+3. Select **URI** (not "Session mode" or "Transaction mode")
+4. Copy the connection string (should have port `5432`)
+5. Replace `[YOUR-PASSWORD]` with your actual database password
+6. **Add `?sslmode=require` at the end** (required for Supabase)
+
+**Note:** If your password has special characters, URL-encode them:
+- `@` → `%40`, `#` → `%23`, `%` → `%25`, `&` → `%26`
+
+### 4. Set Up Database Schema
+
+1. Generate Prisma Client:
+   ```bash
+   npm run db:generate
+   ```
+
+2. Push Prisma schema to database:
+   ```bash
+   npm run db:push
+   ```
+   This creates all tables, indexes, and relationships from `prisma/schema.prisma`
+
+3. Set up RLS policies and triggers:
+   - Go to Supabase **SQL Editor**
+   - Copy and paste the contents of `supabase/setup.sql`
+   - Run the SQL script
+
+4. (Optional) Seed sample data:
+   ```bash
+   npm run db:seed
+   ```
+   Or run SQL: `supabase/seeds/sample-data.sql` in Supabase SQL Editor
+
+**Important:** Prisma is the **only** way to manage your database schema. All table changes must be made in `prisma/schema.prisma` and then pushed to the database using `npm run db:push`.
+
+### 5. Start Development Server
+
+```bash
 npm run dev
 ```
 
@@ -61,97 +173,150 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 ### Build for Production
 
 ```bash
-# Create production build
 npm run build
-
-# Start production server
 npm start
 ```
+
+## 📊 Features
+
+### Current Features (Fully Functional)
+
+✅ **Job Management**
+- Create/edit job postings with rich details
+- Draft and publish workflow
+- Status management (active/draft/closed)
+- Custom application forms
+- Public careers pages
+
+✅ **Candidate Tracking**
+- Application submission and storage
+- Pipeline stages (Applied → Hired)
+- Candidate profiles
+- Stage management
+
+✅ **Dashboard**
+- Key metrics display
+- Job statistics
+- Application counts
+- Recent activity
+
+✅ **Multi-Tenant**
+- Company-specific branding
+- Isolated data per company
+- Custom careers page URLs
+
+### In Development
+
+⏳ **Database Migration**
+- Moving from localStorage to Supabase/Prisma
+- Full authentication system
+- Real-time updates
+
+⏳ **AI Features**
+- Automated candidate scoring
+- Resume parsing
+- Match recommendations
+
+⏳ **Advanced Features**
+- Email notifications
+- Interview scheduling
+- Advanced analytics
+- Team collaboration
 
 ## 📝 Development Guidelines
 
 ### Code Standards
 
 1. **TypeScript First**: All code must use TypeScript with proper type definitions
-2. **Component Documentation**: Every component must have JSDoc comments
+2. **Component Documentation**: Every component should have clear purpose
 3. **Production-Ready**: Write production-quality code from the start
 4. **Consistent Naming**: Follow conventions in PROJECT_STRUCTURE.md
 
-### Component Example
+### Database Workflow
+
+1. Modify `prisma/schema.prisma` for any table/column changes
+2. Run `npm run db:generate` to regenerate Prisma Client types
+3. Run `npm run db:push` to sync schema changes to database (development)
+4. Run `npm run db:migrate` for production migrations
+5. Update `supabase/policies/*.sql` files only if RLS policies need changes
+
+### Using Prisma (Database Queries)
 
 ```typescript
-/**
- * MetricCard - Dashboard metric display component
- * Shows a single key metric with an icon and value
- * Used in the main dashboard overview
- */
-export default function MetricCard({ title, value, icon }: MetricCardProps) {
-  // Implementation
-}
+import { prisma } from '@/lib/prisma';
+
+// Get companies with job postings
+const companies = await prisma.company.findMany({
+  include: {
+    jobPostings: {
+      where: { status: 'published' },
+    },
+  },
+});
+
+// Create a new candidate
+const candidate = await prisma.candidate.create({
+  data: {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com',
+  },
+});
 ```
 
-### File Organization
+### Using Supabase (Authentication)
 
-- **Section-specific**: `app/[section]/components/`
-- **Shared**: `components/[category]/`
-- **Utilities**: `lib/`
+```typescript
+import { createClient } from '@/lib/supabase/server';
 
-See [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) for detailed guidelines.
+const supabase = await createClient();
 
-## 🏗️ Architecture
+// Get current user
+const { data: { user } } = await supabase.auth.getUser();
+```
 
-### Multi-Tenancy
+## 📜 Available Scripts
 
-Each company has a unique slug for their careers page:
-- `/jobs/demo-company` - Demo Company careers
-- `/jobs/techstart` - TechStart Inc careers
+```bash
+# Development
+npm run dev          # Start Next.js dev server
+npm run build        # Build for production
+npm run start        # Start production server
 
-### Current State (MVP)
+# Database
+npm run db:generate  # Generate Prisma Client
+npm run db:push      # Push schema to database (development)
+npm run db:migrate   # Create and apply migration
+npm run db:studio    # Open Prisma Studio (visual DB browser)
+npm run db:seed      # Seed database with sample data
+npm run db:format    # Format Prisma schema
+npm run db:validate  # Validate Prisma schema
+```
 
-- Frontend complete with mock data
-- All features functional for testing
-- Ready for backend integration
+## 🔧 Troubleshooting
 
-### Production Roadmap
+### "Can't reach database server"
 
-1. ✅ **Phase 1**: Frontend + Mock Data
-2. ⏳ **Phase 2**: Supabase + Authentication
-3. ⏳ **Phase 3**: AI Matching Engine
-4. ⏳ **Phase 4**: Email Notifications
-5. ⏳ **Phase 5**: Advanced Analytics
+**Solution:** Make sure your `DATABASE_URL` includes SSL:
 
-## 🎨 Design System
+```env
+# ✅ Correct
+DATABASE_URL=postgresql://postgres:password@db.project.supabase.co:5432/postgres?sslmode=require
 
-- **Colors**: Slate (primary), Emerald (success), Amber (warning), Red (danger)
-- **Typography**: Bold headings, medium body, consistent hierarchy
-- **Spacing**: Tailwind scale, standard gaps of 4-6
-- **Components**: Reusable, documented, production-ready
+# ❌ Wrong (missing SSL)
+DATABASE_URL=postgresql://postgres:password@db.project.supabase.co:5432/postgres
+```
 
-## 📊 Features
+### "Environment variable not found: DATABASE_URL"
 
-### Dashboard
-- Key metrics with real-time data
-- Application trends and pipeline analytics
-- Recent applications feed
-- Quick action shortcuts
+**Solution:** Create a `.env.local` file in the project root with your `DATABASE_URL`.
 
-### Jobs Management
-- Create/edit job postings with rich editor
-- Custom application forms
-- Status management (active/draft/closed)
-- Per-job analytics and applicant tracking
+### "PrismaClient is not configured"
 
-### Candidates
-- AI match scoring and ranking
-- Pipeline stages (Applied → Hired)
-- Candidate profiles and history
-- Advanced filtering and search
-
-### Settings
-- Department configuration
-- Location management
-- Job type customization
-- Company branding (planned)
+**Solution:**
+1. Make sure `DATABASE_URL` is set in `.env.local`
+2. Run `npm run db:generate`
+3. Restart your Next.js dev server
 
 ## 👥 Team Collaboration
 
@@ -188,6 +353,8 @@ vercel
 
 Compatible with: Netlify, AWS Amplify, Railway, Render
 
+**Remember to set environment variables in your deployment platform!**
+
 ## 🎯 Hackathon Goals
 
 **YC x HackPrinceton Fall 2025**
@@ -197,8 +364,10 @@ Building a production-level ATS to compete with Lever and Greenhouse:
 - ✅ Comprehensive job management
 - ✅ Public careers pages
 - ✅ Dashboard analytics
+- ✅ Candidate tracking
+- 🔄 Database integration (in progress)
 - ⏳ AI candidate matching
-- ⏳ Backend integration
+- ⏳ Email notifications
 
 ## 📄 License
 
