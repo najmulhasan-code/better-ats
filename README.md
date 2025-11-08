@@ -49,8 +49,6 @@ npm install
 
 ### 3. Set Up Database Schema
 
-**Recommended Approach (Using Prisma):**
-
 1. Push Prisma schema to database:
    ```bash
    npm run db:push
@@ -59,19 +57,17 @@ npm install
 
 2. Set up RLS policies and triggers:
    - Go to Supabase **SQL Editor**
-   - Copy and paste the contents of `supabase/setup.sql` (runs all setup files)
-   - Or run individual files from `supabase/` folder in order:
-     - `extensions/uuid-extension.sql`
-     - `functions/update-timestamp.sql`
-     - `policies/rls-enable.sql`
-     - `policies/*-policies.sql` (all policy files)
+   - Copy and paste the contents of `supabase/setup.sql`
+   - This sets up RLS policies, triggers, and extensions
+   - Run the SQL script
 
 3. (Optional) Seed sample data:
-   - Use Prisma seed: `npm run db:seed`
-   - Or run SQL: `supabase/seeds/sample-data.sql` in Supabase SQL Editor
+   ```bash
+   npm run db:seed
+   ```
+   Or run SQL: `supabase/seeds/sample-data.sql` in Supabase SQL Editor
 
-**Alternative Approach (Using SQL):**
-If you prefer to use SQL directly, you can use `supabase/schema.sql` (legacy file).
+**Important:** Prisma is the **only** way to manage your database schema. All table changes must be made in `prisma/schema.prisma` and then pushed to the database using `npm run db:push`.
 
 ### 4. Configure Environment Variables
 
@@ -233,10 +229,16 @@ npm run start        # Start production server
 
 # Database
 npm run db:generate  # Generate Prisma Client
-npm run db:push      # Push schema to database
+npm run db:push      # Push schema to database (development)
 npm run db:migrate   # Create and apply migration
+npm run db:migrate:deploy  # Deploy migrations (production)
+npm run db:migrate:status  # Check migration status
+npm run db:migrate:reset   # Reset database (dev only)
 npm run db:studio    # Open Prisma Studio (visual DB browser)
 npm run db:seed      # Seed database with sample data
+npm run db:format    # Format Prisma schema
+npm run db:validate  # Validate Prisma schema
+npm run db:introspect # Introspect existing database
 ```
 
 ## Troubleshooting
@@ -287,7 +289,26 @@ DATABASE_URL=postgresql://postgres:password@db.project.supabase.co:5432/postgres
 
 ```
 lib/
-  ├── prisma.ts              # Prisma client singleton
+  ├── prisma.ts              # Prisma client singleton (with extensions & middleware)
+  ├── prisma/
+  │   ├── extensions.ts      # Prisma client extensions
+  │   ├── middleware.ts      # Prisma middleware
+  │   ├── types.ts           # Type exports and helpers
+  │   ├── query-helpers.ts   # Query utilities (pagination, search)
+  │   ├── transactions.ts    # Transaction helpers
+  │   ├── errors.ts          # Error handling
+  │   ├── test-utils.ts      # Testing utilities
+  │   └── index.ts           # Prisma module exports
+  ├── repositories/          # Repository pattern
+  │   ├── base.repository.ts
+  │   ├── company.repository.ts
+  │   ├── job-posting.repository.ts
+  │   ├── candidate.repository.ts
+  │   ├── application.repository.ts
+  │   ├── interview.repository.ts
+  │   └── index.ts
+  ├── services/              # Service layer
+  │   └── application.service.ts
   ├── db.ts                  # Helper functions using both
   └── supabase/
       ├── client.ts          # Browser Supabase client
@@ -305,11 +326,10 @@ prisma/
 
 supabase/
   ├── README.md            # Supabase setup documentation
-  ├── setup.sql            # Complete setup script (runs all files)
-  ├── schema.sql           # Legacy SQL schema (deprecated)
-  ├── extensions/          # Database extensions
+  ├── setup.sql            # Complete setup script (RLS, triggers, extensions)
+  ├── extensions/          # Database extensions (UUID)
   │   └── uuid-extension.sql
-  ├── functions/           # Database functions
+  ├── functions/           # Database functions (triggers)
   │   └── update-timestamp.sql
   ├── policies/            # RLS policies (one file per table)
   │   ├── rls-enable.sql
@@ -318,32 +338,75 @@ supabase/
   │   ├── candidates-policies.sql
   │   ├── applications-policies.sql
   │   └── interviews-policies.sql
-  └── seeds/               # Sample data
+  └── seeds/               # Sample data (optional)
       └── sample-data.sql
 ```
 
 ## Schema Management
 
-**Prisma Schema (`prisma/schema.prisma`)** is the **source of truth** for:
+**Prisma Schema (`prisma/schema.prisma`)** is the **only source of truth** for:
 - Table structure
 - Columns and data types
 - Relationships and foreign keys
 - Indexes
+- Enums
 
-**Supabase SQL Files** are used for:
-- `supabase/extensions/` - Database extensions (UUID)
-- `supabase/functions/` - Database functions (triggers)
-- `supabase/policies/` - Row Level Security policies (one file per table)
+**Supabase SQL Files** are used **only** for Supabase-specific features:
+- `supabase/extensions/` - Database extensions (UUID) - Run once
+- `supabase/functions/` - Database functions (triggers) - Set up once
+- `supabase/policies/` - Row Level Security policies - Configure as needed
 - `supabase/seeds/` - Sample data (optional)
 - `supabase/setup.sql` - Complete setup script (all-in-one)
 
+**Important:** 
+- ❌ **Do NOT** create tables using SQL - Use Prisma only
+- ✅ **Do** use SQL for RLS policies, triggers, and extensions (Prisma doesn't handle these)
+
 **Workflow:**
-1. Modify `prisma/schema.prisma` for table changes
-2. Run `npm run db:generate` to regenerate types
-3. Run `npm run db:push` to sync changes to database (development)
+1. Modify `prisma/schema.prisma` for any table/column changes
+2. Run `npm run db:generate` to regenerate Prisma Client types
+3. Run `npm run db:push` to sync schema changes to database (development)
 4. Run `npm run db:migrate` for production migrations
-5. Update `supabase/policies/*.sql` files if RLS policies need changes
-6. Run updated SQL files in Supabase SQL Editor
+5. Update `supabase/policies/*.sql` files only if RLS policies need changes
+6. Run updated SQL files in Supabase SQL Editor (only for RLS/triggers)
+
+## Advanced Prisma Features
+
+This project includes advanced Prisma features:
+
+- **Client Extensions**: Custom methods and computed fields
+- **Middleware**: Logging, validation, and audit trails
+- **Type Safety**: Comprehensive TypeScript types
+- **Query Helpers**: Pagination, search, and aggregation utilities
+- **Transactions**: Atomic operations and batch processing
+- **Error Handling**: Custom error types and handlers
+- **Repository Pattern**: Data access layer with business logic
+- **Service Layer**: Business logic abstraction
+- **Testing Utilities**: Test helpers and factories
+
+See [docs/PRISMA-FEATURES.md](./docs/PRISMA-FEATURES.md) for complete documentation.
+
+### Quick Example
+
+```typescript
+import { prisma } from '@/lib/prisma';
+import { applicationRepository } from '@/lib/repositories';
+import { createPaginatedQuery } from '@/lib/prisma/query-helpers';
+
+// Use extended methods
+const candidate = await prisma.candidate.findUnique({ where: { id: '...' } });
+const fullName = candidate.fullName; // Computed field
+
+// Use repository pattern
+const applications = await applicationRepository.getByStatus('APPLIED');
+
+// Use pagination helper
+const result = await createPaginatedQuery(prisma.application, {
+  page: 1,
+  pageSize: 10,
+  where: { status: 'APPLIED' },
+});
+```
 
 ## Best Practices
 
@@ -352,6 +415,9 @@ supabase/
 3. **Client-Side:** Use API Routes (which use Prisma) for data fetching, Supabase Client for real-time
 4. **Authentication:** Always check auth with Supabase before Prisma queries
 5. **Type Safety:** Prisma generates types automatically - use them throughout your app
+6. **Use Repositories:** Prefer repositories over direct Prisma calls for better organization
+7. **Use Transactions:** Use transactions for multi-step operations
+8. **Error Handling:** Use error handling utilities for consistent error responses
 
 ## License
 

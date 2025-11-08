@@ -1,6 +1,15 @@
--- Better ATS - Complete Supabase Setup
--- Copy and paste this entire file into Supabase SQL Editor
--- Run this AFTER Prisma has created the tables (npm run db:push)
+-- Better ATS - Supabase Setup (RLS, Triggers, Extensions)
+-- 
+-- IMPORTANT: This file does NOT create tables. Tables are created by Prisma.
+-- 
+-- Prerequisites:
+-- 1. Run: npm run db:push (creates all tables from Prisma schema)
+-- 2. Then run this SQL file in Supabase SQL Editor
+--
+-- This file sets up:
+-- - Database extensions (UUID)
+-- - Database triggers (updated_at timestamps)
+-- - Row Level Security (RLS) policies
 
 -- ============================================================================
 -- 1. EXTENSIONS
@@ -112,7 +121,10 @@ CREATE POLICY "Allow all operations on interviews"
 -- SETUP COMPLETE
 -- ============================================================================
 
-SELECT 'Supabase setup completed successfully!' AS status;
+SELECT 'Supabase RLS, triggers, and extensions setup completed successfully!' AS status;
 
--- Note: To seed sample data, run supabase/seeds/sample-data.sql separately
--- Or use: npm run db:seed
+-- Next steps:
+-- 1. Tables are already created by Prisma (npm run db:push)
+-- 2. RLS policies, triggers, and extensions are now set up
+-- 3. (Optional) Seed sample data: npm run db:seed
+--    Or run: supabase/seeds/sample-data.sql in SQL Editor

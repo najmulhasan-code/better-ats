@@ -11,7 +11,14 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:format": "prisma format",
+    "db:validate": "prisma validate",
+    "db:introspect": "prisma db pull",
+    "db:reset": "prisma migrate reset"
   },
   "dependencies": {
     "react": "19.2.0",

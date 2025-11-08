@@ -2,12 +2,16 @@
 
 This directory contains SQL files for Supabase-specific database features that Prisma doesn't handle.
 
+**⚠️ Important: This directory does NOT contain table schemas.**
+- All table schemas are managed by **Prisma** in `prisma/schema.prisma`
+- This directory only contains: RLS policies, triggers, extensions, and seed data
+
 ## File Organization
 
 ```
 supabase/
 ├── README.md                    # This file
-├── schema.sql                   # Legacy schema (deprecated)
+├── setup.sql                    # Complete setup script (all-in-one)
 ├── extensions/
 │   └── uuid-extension.sql      # UUID extension setup
 ├── functions/
@@ -22,6 +26,8 @@ supabase/
 └── seeds/
     └── sample-data.sql         # Sample data for development
 ```
+
+**Note:** This directory does NOT contain schema definitions. All table schemas are managed by Prisma in `prisma/schema.prisma`.
 
 ## Setup Order
 

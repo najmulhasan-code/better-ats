@@ -1,6 +1,5 @@
 import { PrismaClient, EmploymentType, JobPostingStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 async function main() {
   console.log('🌱 Seeding database...');
