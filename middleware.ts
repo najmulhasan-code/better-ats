@@ -2,6 +2,11 @@
  * Next.js Middleware
  * 
  * Handles authentication and redirects
+ * 
+ * Note: Next.js 16 shows a deprecation warning for middleware.ts in favor of proxy.ts.
+ * This is intentional - we're keeping middleware.ts for now as it works correctly.
+ * The warning is harmless and doesn't affect functionality.
+ * To migrate in the future: rename file to proxy.ts and change function name to proxy.
  */
 
 import { createServerClient } from '@supabase/ssr';

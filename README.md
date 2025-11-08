@@ -83,6 +83,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 # Get from: Supabase Settings → Database → Connection string → URI
 # Format: postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres?sslmode=require
 DATABASE_URL=postgresql://postgres:your_password@db.your-project.supabase.co:5432/postgres?sslmode=require
+
+# Anthropic (Claude) API Configuration
+# Get from: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
 **Getting the Database URL:**

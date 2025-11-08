@@ -9,7 +9,6 @@ import { candidateRepository } from '../repositories';
 import { jobPostingRepository } from '../repositories';
 import { createApplicationWithRelations } from '../prisma/transactions';
 import { handlePrismaError, NotFoundError } from '../prisma/errors';
-import type { ApplicationCreateInput } from '../prisma/types';
 
 export class ApplicationService {
   /**
