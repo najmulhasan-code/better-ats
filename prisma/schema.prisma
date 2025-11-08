@@ -25,23 +25,20 @@ enum EmploymentType {
 }
 
 enum JobPostingStatus {
+  ACTIVE
   DRAFT
-  PUBLISHED
   CLOSED
-  ARCHIVED
   @@map("job_posting_status")
 }
 
-enum ApplicationStatus {
+enum ApplicationStage {
   APPLIED
-  REVIEWING
   SCREENING
-  INTERVIEWING
-  OFFERED
-  REJECTED
+  INTERVIEW
+  OFFER
   HIRED
-  WITHDRAWN
-  @@map("application_status")
+  REJECTED
+  @@map("application_stage")
 }
 
 enum InterviewType {
@@ -70,6 +67,7 @@ enum InterviewStatus {
 /// Company information
 model Company {
   id          String    @id @default(uuid()) @db.Uuid
+  slug        String    @unique @db.VarChar(100)
   name        String    @db.VarChar(255)
   website     String?   @db.VarChar(255)
   description String?   @db.Text
@@ -81,6 +79,7 @@ model Company {
 
   @@map("companies")
   @@index([name])
+  @@index([slug])
 }
 
 // ============================================================================
@@ -89,25 +88,32 @@ model Company {
 
 /// Job posting/opening
 model JobPosting {
-  id             String           @id @default(uuid()) @db.Uuid
-  companyId      String           @map("company_id") @db.Uuid
-  title          String           @db.VarChar(255)
-  description    String?          @db.Text
-  requirements   String?          @db.Text
-  location       String?          @db.VarChar(255)
-  employmentType EmploymentType?  @map("employment_type")
-  status         JobPostingStatus @default(DRAFT)
-  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String            @id @default(uuid()) @db.Uuid
+  companyId        String            @map("company_id") @db.Uuid
+  title            String            @db.VarChar(255)
+  department       String            @db.VarChar(100)
+  location         String            @db.VarChar(255)
+  employmentType   EmploymentType    @map("employment_type")
+  salary           String?           @db.VarChar(100)
+  description      String?           @db.Text
+  fullDescription  String?           @map("full_description") @db.Text
+  responsibilities String[]          @default([])
+  requirements     String[]          @default([])
+  niceToHave       String[]          @map("nice_to_have") @default([])
+  status           JobPostingStatus  @default(DRAFT)
+  postedAt         DateTime?         @map("posted_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications Application[]
 
   @@map("job_postings")
-  @@index([companyId], map: "idx_job_postings_company_id")
-  @@index([status], map: "idx_job_postings_status")
+  @@index([companyId])
+  @@index([status])
   @@index([employmentType])
+  @@index([department])
   @@index([createdAt])
 }
 
@@ -117,23 +123,24 @@ model JobPosting {
 
 /// Candidate/Applicant information
 model Candidate {
-  id          String   @id @default(uuid()) @db.Uuid
-  firstName   String   @map("first_name") @db.VarChar(100)
-  lastName    String   @map("last_name") @db.VarChar(100)
-  email       String   @unique @db.VarChar(255)
-  phone       String?  @db.VarChar(50)
-  resumeUrl   String?  @map("resume_url") @db.Text
-  linkedinUrl String?  @map("linkedin_url") @db.VarChar(255)
-  portfolioUrl String? @map("portfolio_url") @db.VarChar(255)
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  firstName    String   @map("first_name") @db.VarChar(100)
+  lastName     String   @map("last_name") @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
+  resumeUrl    String?  @map("resume_url") @db.Text
+  linkedinUrl  String?  @map("linkedin_url") @db.VarChar(255)
+  portfolioUrl String?  @map("portfolio_url") @db.VarChar(255)
+  aiScore      Int?     @map("ai_score") @db.Integer
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   applications Application[]
 
   @@map("candidates")
-  @@index([email], map: "idx_candidates_email")
+  @@index([email])
   @@index([firstName, lastName])
   @@index([createdAt])
 }
@@ -144,24 +151,29 @@ model Candidate {
 
 /// Job application - links candidates to job postings
 model Application {
-  id           String          @id @default(uuid()) @db.Uuid
-  jobPostingId String          @map("job_posting_id") @db.Uuid
-  candidateId  String          @map("candidate_id") @db.Uuid
-  status       ApplicationStatus @default(APPLIED)
-  coverLetter  String?         @map("cover_letter") @db.Text
-  appliedAt    DateTime        @default(now()) @map("applied_at") @db.Timestamptz(6)
-  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String           @id @default(uuid()) @db.Uuid
+  jobPostingId  String           @map("job_posting_id") @db.Uuid
+  candidateId   String           @map("candidate_id") @db.Uuid
+  stage         ApplicationStage @default(APPLIED)
+  coverLetter   String?          @map("cover_letter") @db.Text
+  matchReasons  String[]         @map("match_reasons") @default([])
+  skillMatch    String[]         @map("skill_match") @default([])
+  experience    String?          @db.VarChar(255)
+  currentRole   String?          @map("current_role") @db.VarChar(255)
+  education     String?          @db.VarChar(255)
+  appliedAt     DateTime         @default(now()) @map("applied_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
-  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
-  candidate  Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  jobPosting JobPosting  @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  candidate  Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   interviews Interview[]
 
-  @@unique([jobPostingId, candidateId], map: "uq_application_job_candidate")
+  @@unique([jobPostingId, candidateId])
   @@map("applications")
-  @@index([jobPostingId], map: "idx_applications_job_posting_id")
-  @@index([candidateId], map: "idx_applications_candidate_id")
-  @@index([status], map: "idx_applications_status")
+  @@index([jobPostingId])
+  @@index([candidateId])
+  @@index([stage])
   @@index([appliedAt])
 }
 
@@ -171,21 +183,21 @@ model Application {
 
 /// Interview scheduling and tracking
 model Interview {
-  id            String         @id @default(uuid()) @db.Uuid
-  applicationId String         @map("application_id") @db.Uuid
-  interviewType InterviewType? @map("interview_type")
-  scheduledAt   DateTime?      @map("scheduled_at") @db.Timestamptz(6)
-  location      String?        @db.VarChar(255)
-  notes         String?        @db.Text
+  id            String          @id @default(uuid()) @db.Uuid
+  applicationId String          @map("application_id") @db.Uuid
+  interviewType InterviewType?  @map("interview_type")
+  scheduledAt   DateTime?       @map("scheduled_at") @db.Timestamptz(6)
+  location      String?         @db.VarChar(255)
+  notes         String?         @db.Text
   status        InterviewStatus @default(SCHEDULED)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   // Relations
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("interviews")
-  @@index([applicationId], map: "idx_interviews_application_id")
+  @@index([applicationId])
   @@index([status])
   @@index([scheduledAt])
   @@index([interviewType])
