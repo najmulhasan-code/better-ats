@@ -1,0 +1,192 @@
+// Better ATS - Prisma Schema
+// This is the source of truth for database structure
+// Run `npm run db:push` to sync changes to the database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  TEMPORARY
+  @@map("employment_type")
+}
+
+enum JobPostingStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+  @@map("job_posting_status")
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  SCREENING
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  HIRED
+  WITHDRAWN
+  @@map("application_status")
+}
+
+enum InterviewType {
+  PHONE
+  VIDEO
+  ONSITE
+  TECHNICAL
+  BEHAVIORAL
+  PANEL
+  @@map("interview_type")
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  NO_SHOW
+  @@map("interview_status")
+}
+
+// ============================================================================
+// COMPANY MODELS
+// ============================================================================
+
+/// Company information
+model Company {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  website     String?   @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  jobPostings JobPosting[]
+
+  @@map("companies")
+  @@index([name])
+}
+
+// ============================================================================
+// JOB POSTING MODELS
+// ============================================================================
+
+/// Job posting/opening
+model JobPosting {
+  id             String           @id @default(uuid()) @db.Uuid
+  companyId      String           @map("company_id") @db.Uuid
+  title          String           @db.VarChar(255)
+  description    String?          @db.Text
+  requirements   String?          @db.Text
+  location       String?          @db.VarChar(255)
+  employmentType EmploymentType?  @map("employment_type")
+  status         JobPostingStatus @default(DRAFT)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@map("job_postings")
+  @@index([companyId], map: "idx_job_postings_company_id")
+  @@index([status], map: "idx_job_postings_status")
+  @@index([employmentType])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// CANDIDATE MODELS
+// ============================================================================
+
+/// Candidate/Applicant information
+model Candidate {
+  id          String   @id @default(uuid()) @db.Uuid
+  firstName   String   @map("first_name") @db.VarChar(100)
+  lastName    String   @map("last_name") @db.VarChar(100)
+  email       String   @unique @db.VarChar(255)
+  phone       String?  @db.VarChar(50)
+  resumeUrl   String?  @map("resume_url") @db.Text
+  linkedinUrl String?  @map("linkedin_url") @db.VarChar(255)
+  portfolioUrl String? @map("portfolio_url") @db.VarChar(255)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  applications Application[]
+
+  @@map("candidates")
+  @@index([email], map: "idx_candidates_email")
+  @@index([firstName, lastName])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// APPLICATION MODELS
+// ============================================================================
+
+/// Job application - links candidates to job postings
+model Application {
+  id           String          @id @default(uuid()) @db.Uuid
+  jobPostingId String          @map("job_posting_id") @db.Uuid
+  candidateId  String          @map("candidate_id") @db.Uuid
+  status       ApplicationStatus @default(APPLIED)
+  coverLetter  String?         @map("cover_letter") @db.Text
+  appliedAt    DateTime        @default(now()) @map("applied_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  jobPosting JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  candidate  Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  interviews Interview[]
+
+  @@unique([jobPostingId, candidateId], map: "uq_application_job_candidate")
+  @@map("applications")
+  @@index([jobPostingId], map: "idx_applications_job_posting_id")
+  @@index([candidateId], map: "idx_applications_candidate_id")
+  @@index([status], map: "idx_applications_status")
+  @@index([appliedAt])
+}
+
+// ============================================================================
+// INTERVIEW MODELS
+// ============================================================================
+
+/// Interview scheduling and tracking
+model Interview {
+  id            String         @id @default(uuid()) @db.Uuid
+  applicationId String         @map("application_id") @db.Uuid
+  interviewType InterviewType? @map("interview_type")
+  scheduledAt   DateTime?      @map("scheduled_at") @db.Timestamptz(6)
+  location      String?        @db.VarChar(255)
+  notes         String?        @db.Text
+  status        InterviewStatus @default(SCHEDULED)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+  @@index([applicationId], map: "idx_interviews_application_id")
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([interviewType])
+}
