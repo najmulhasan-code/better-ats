@@ -327,7 +327,7 @@ export default function Hero() {
 
             {/* CTA Button */}
             <Link 
-              href="/dashboard"
+              href="/login"
               className="group relative inline-block px-10 py-5 bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 text-white text-lg font-semibold rounded-2xl shadow-2xl hover:shadow-teal-500/50 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 animate-fade-in-up"
               style={{ animationDelay: '0.8s' }}
             >
@@ -738,7 +738,7 @@ export default function Hero() {
             Join forward-thinking companies that are already using Better ATS to find exceptional talent
         </p>
         <Link 
-          href="/dashboard"
+          href="/login"
             className="inline-block px-10 py-5 bg-white text-teal-600 text-lg font-semibold rounded-2xl shadow-2xl hover:shadow-white/50 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
         >
             Get Started Free
