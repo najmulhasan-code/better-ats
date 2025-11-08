@@ -1,10 +1,11 @@
 /**
  * Client-Side Authentication Utilities
  * 
- * Use these functions in Client Components only
+ * This file contains only client-side auth functions.
+ * Import this in Client Components to avoid bundling server code.
  */
 
-import { createClient } from '../supabase/client';
+import { createClient } from './supabase/client';
 
 /**
  * Sign in with Google (client-side)
@@ -45,7 +46,7 @@ export async function signOut() {
 /**
  * Get current user (client-side)
  */
-export async function getCurrentUser() {
+export async function getCurrentUserClient() {
   const supabase = createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   

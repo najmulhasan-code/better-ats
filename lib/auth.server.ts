@@ -1,10 +1,11 @@
 /**
  * Server-Side Authentication Utilities
  * 
- * Use these functions in Server Components and API Routes only
+ * This file contains only server-side auth functions.
+ * Import this in Server Components and API Routes only.
  */
 
-import { createClient } from '../supabase/server';
+import { createClient } from './supabase/server';
 
 /**
  * Get the current authenticated user (server-side)

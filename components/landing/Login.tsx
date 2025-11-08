@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signInWithGoogle } from '@/lib/auth/client';
+import { signInWithGoogle } from '@/lib/auth.client';
 
 export default function Login() {
   const searchParams = useSearchParams();
