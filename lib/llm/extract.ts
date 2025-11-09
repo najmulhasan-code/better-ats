@@ -1,14 +1,34 @@
 /**
  * LLM-based Resume Extraction
  * 
- * Uses Claude API to extract structured information from resume text
+ * Uses LLM (Anthropic Claude or OpenAI GPT) to extract structured information from resume text
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { callLLM, isLLMAvailable } from './client';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function logLLMError(err: any, context?: string) {
+  try {
+    const str = (err && err.message) ? err.message : JSON.stringify(err);
+    if (str && (str.includes('not_found_error') || str.includes('model:') || str.includes('not found'))) {
+      console.error('❌ LLM model not found or invalid model name.');
+      console.error('');
+      console.error('Available providers:');
+      if (process.env.ANTHROPIC_API_KEY) {
+        console.error('  - Anthropic Claude (ANTHROPIC_API_KEY set)');
+      }
+      if (process.env.OPENAI_API_KEY) {
+        console.error('  - OpenAI GPT (OPENAI_API_KEY set)');
+      }
+      if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
+        console.error('  - No API keys found. Please set ANTHROPIC_API_KEY or OPENAI_API_KEY');
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  if (context) console.error(context);
+  console.error(err);
+}
 
 export interface ParsedResumeData {
   personalInfo?: {
@@ -37,8 +57,8 @@ export interface ParsedResumeData {
  * Extract structured resume data using Claude
  */
 export async function extractResumeWithLLM(resumeText: string): Promise<ParsedResumeData> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!isLLMAvailable()) {
+    throw new Error('Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. LLM analysis requires at least one API key.');
   }
 
   const prompt = `You are an expert at parsing resumes and extracting structured information. 
@@ -86,27 +106,20 @@ Important rules:
 - Extract full job descriptions for experience entries
 - Include location if available (city, state or city, country format)`;
 
+  // Use unified LLM client with automatic Anthropic -> OpenAI fallback
+  console.log(`[LLM Extract] Starting extraction with automatic provider fallback...`);
+  
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022', // Using Claude 3.5 Sonnet (latest)
-      max_tokens: 4096,
+    const response = await callLLM(prompt, {
       temperature: 0.1, // Low temperature for consistent extraction
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      maxTokens: 4096,
     });
 
-    // Extract text from response
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '{}';
+    console.log(`[LLM Extract] ✅ Extraction completed using ${response.provider} (${response.model})`);
 
     // Parse JSON response
-    // Sometimes Claude wraps response in markdown code blocks
-    let jsonText = responseText.trim();
+    // Sometimes LLM wraps response in markdown code blocks
+    let jsonText = response.content.trim();
     
     // Remove markdown code blocks if present
     if (jsonText.startsWith('```json')) {
@@ -131,13 +144,7 @@ Important rules:
       rawText: resumeText,
     };
   } catch (error: any) {
-    console.error('LLM extraction error:', error);
-    
-    // If JSON parsing fails, try to extract partial data
-    if (error.message?.includes('JSON')) {
-      throw new Error(`Failed to parse LLM response as JSON: ${error.message}`);
-    }
-    
+    console.error('[LLM Extract] Extraction failed:', error);
     throw new Error(`LLM extraction failed: ${error.message || 'Unknown error'}`);
   }
 }
@@ -156,8 +163,8 @@ export async function analyzeResumeMatchWithLLM(
   weaknesses: string[];
   recommendations: string[];
 }> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!isLLMAvailable()) {
+    throw new Error('Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. LLM analysis requires at least one API key.');
   }
 
   const resumeSummary = `
@@ -203,21 +210,12 @@ Important:
 - Return ONLY valid JSON, no additional text or markdown formatting`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022', // Using Claude 3.5 Sonnet (latest)
-      max_tokens: 4096,
+    const response = await callLLM(prompt, {
       temperature: 0.3, // Slightly higher temperature for more nuanced analysis
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      maxTokens: 4096,
     });
 
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '{}';
+    const responseText = response.content;
 
     let jsonText = responseText.trim();
     
@@ -241,7 +239,7 @@ Important:
       recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : [],
     };
   } catch (error: any) {
-    console.error('LLM analysis error:', error);
+    logLLMError(error, 'LLM analysis error');
     throw new Error(`LLM analysis failed: ${error.message || 'Unknown error'}`);
   }
 }
@@ -268,8 +266,8 @@ export async function analyzeCoverLetterMatchWithLLM(
   recommendations: string[];
   relevantPhrases: string[];
 }> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!isLLMAvailable()) {
+    throw new Error('Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. LLM analysis requires at least one API key.');
   }
 
   const prompt = `You are an expert recruiter analyzing a cover letter/questionnaire (text) against a job description.
@@ -310,21 +308,12 @@ Important:
 - Return ONLY valid JSON, no additional text or markdown formatting`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
+    const response = await callLLM(prompt, {
       temperature: 0.3,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      maxTokens: 4096,
     });
 
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '{}';
+    const responseText = response.content;
 
     let jsonText = responseText.trim();
     
@@ -349,7 +338,7 @@ Important:
       relevantPhrases: Array.isArray(analysis.relevantPhrases) ? analysis.relevantPhrases : [],
     };
   } catch (error: any) {
-    console.error('LLM cover letter analysis error:', error);
+    logLLMError(error, 'LLM cover letter analysis error');
     throw new Error(`LLM cover letter analysis failed: ${error.message || 'Unknown error'}`);
   }
 }
@@ -381,8 +370,8 @@ export async function analyzeIntegratedApplicationWithLLM(
   recommendations: string[];
   hiringRecommendation: 'strong_yes' | 'yes' | 'maybe' | 'no';
 }> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!isLLMAvailable()) {
+    throw new Error('Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. LLM analysis requires at least one API key.');
   }
 
   const prompt = `You are an expert recruiter providing a final holistic analysis of a job application.
@@ -431,21 +420,12 @@ Important:
 - Return ONLY valid JSON, no additional text or markdown formatting`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
+    const response = await callLLM(prompt, {
       temperature: 0.3,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      maxTokens: 4096,
     });
 
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '{}';
+    const responseText = response.content;
 
     let jsonText = responseText.trim();
     
@@ -476,7 +456,7 @@ Important:
       hiringRecommendation: hiringRecommendation as 'strong_yes' | 'yes' | 'maybe' | 'no',
     };
   } catch (error: any) {
-    console.error('LLM integrated analysis error:', error);
+    logLLMError(error, 'LLM integrated analysis error');
     throw new Error(`LLM integrated analysis failed: ${error.message || 'Unknown error'}`);
   }
 }
@@ -492,8 +472,8 @@ export async function extractKeywordsWithLLM(
   text: string,
   context?: string
 ): Promise<string[]> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!isLLMAvailable()) {
+    throw new Error('Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. LLM analysis requires at least one API key.');
   }
 
   if (!text || text.trim().length === 0) {
@@ -530,21 +510,12 @@ Example format:
 Return ONLY the JSON array, no additional text or markdown formatting.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 2048,
+    const response = await callLLM(prompt, {
       temperature: 0.2, // Low temperature for consistent extraction
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      maxTokens: 2048,
     });
 
-    const responseText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '[]';
+    const responseText = response.content;
 
     let jsonText = responseText.trim();
     
@@ -567,7 +538,7 @@ Return ONLY the JSON array, no additional text or markdown formatting.`;
       .map((kw: string) => kw.trim().toLowerCase())
       .filter((kw: string, index: number, arr: string[]) => arr.indexOf(kw) === index); // Remove duplicates
   } catch (error: any) {
-    console.error('LLM keyword extraction error:', error);
+    logLLMError(error, 'LLM keyword extraction error');
     throw new Error(`LLM keyword extraction failed: ${error.message || 'Unknown error'}`);
   }
 }

@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       responsibilities,
       requirements,
       niceToHave,
+      privateDirections,
       status = 'draft',
       applicationForm,
     } = body;
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
         responsibilities: responsibilities || [],
         requirements: requirements || [],
         niceToHave: niceToHave || [],
+        privateDirections: privateDirections || null,
         status,
         posted,
         postedTimestamp,

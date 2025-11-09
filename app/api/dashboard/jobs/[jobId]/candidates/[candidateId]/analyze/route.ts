@@ -126,19 +126,48 @@ export async function POST(
     // Analyze the application
     const analysis = await analyzeApplication(candidateId, true);
 
-    // Update the candidate's aiScore with the final score
+    // Get scores from analysis result
+    // The analysis should have finalScore, resumeScore, questioneryScore from integration.ts
+    let finalScore = analysis.finalScore;
+    let resumeScore = analysis.resumeScore;
+    let questioneryScore = analysis.questioneryScore;
+
+    // If scores are not in analysis result, use complianceScore as fallback
+    if (finalScore == null || isNaN(finalScore)) {
+      finalScore = analysis.privateDirectionsCompliance?.complianceScore ?? 0;
+    }
+    if (resumeScore == null || isNaN(resumeScore)) {
+      resumeScore = finalScore;
+    }
+    if (questioneryScore == null || isNaN(questioneryScore)) {
+      questioneryScore = finalScore;
+    }
+
+    // Validate all scores are numbers and within 0-100 range
+    const validFinalScore = typeof finalScore === 'number' && !isNaN(finalScore) 
+      ? Math.max(0, Math.min(100, finalScore)) 
+      : 0;
+    const validResumeScore = typeof resumeScore === 'number' && !isNaN(resumeScore) 
+      ? Math.max(0, Math.min(100, resumeScore)) 
+      : 0;
+    const validQuestioneryScore = typeof questioneryScore === 'number' && !isNaN(questioneryScore) 
+      ? Math.max(0, Math.min(100, questioneryScore)) 
+      : 0;
+
     await prisma.candidate.update({
       where: { id: candidateId },
       data: {
-        aiScore: Math.round(analysis.finalScore),
+        aiScore: Math.round(validFinalScore),
+        finalScore: validFinalScore,
+        resumeScore: validResumeScore,
+        questioneryScore: validQuestioneryScore,
         // Store match reasons from analysis
         matchReasons: [
-          `Resume Score: ${Math.round(analysis.resumeScore)}%`,
-          `Cover Letter Score: ${Math.round(analysis.questioneryScore)}%`,
-          analysis.hiringRecommendation ? `Recommendation: ${analysis.hiringRecommendation}` : '',
-          ...(analysis.overallStrengths || []).slice(0, 3),
+          `Resume Score: ${Math.round(validResumeScore)}%`,
+          `Cover Letter Score: ${Math.round(validQuestioneryScore)}%`,
+          ...(analysis.overallStrongPoints || []).slice(0, 3),
         ].filter(Boolean),
-      },
+      } as any,
     });
 
     return NextResponse.json({ 

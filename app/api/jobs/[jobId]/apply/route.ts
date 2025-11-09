@@ -124,6 +124,17 @@ export async function POST(
       resumeUrl = resumeData?.name || null;
     }
 
+    // Prepare questionery data
+    const questioneryData = {
+      coverLetter: coverLetter || null,
+      customAnswers: Object.keys(customAnswers).length > 0 ? customAnswers : undefined,
+      knockoutAnswers: Object.keys(knockoutAnswers).length > 0 ? knockoutAnswers : undefined,
+      portfolio: portfolio || null,
+      linkedin: linkedin || null,
+      phone: phone || null,
+      currentLocation: currentLocation || null,
+    };
+
     // Create candidate
     const candidate = await prisma.candidate.create({
       data: {
@@ -150,6 +161,7 @@ export async function POST(
         education: 'See resume',
         resumeFile: resumeUrl,
         coverLetter: coverLetter || null,
+        questioneryData: questioneryData as any, // Store questionery data
       },
     });
 
@@ -161,8 +173,10 @@ export async function POST(
         answer: { value: answer, type: 'knockout' },
       }));
 
+      // Prisma's generated types are strict for Json inputs; cast to any to
+      // satisfy TypeScript here because the data originates from request JSON.
       await prisma.applicationResponse.createMany({
-        data: knockoutResponses,
+        data: knockoutResponses as any,
       });
     }
 
@@ -175,7 +189,7 @@ export async function POST(
       }));
 
       await prisma.applicationResponse.createMany({
-        data: customResponses,
+        data: customResponses as any,
       });
     }
 
@@ -225,6 +239,16 @@ export async function POST(
         },
       },
     });
+
+    // Trigger analysis asynchronously (don't block response)
+    if (process.env.ANTHROPIC_API_KEY) {
+      // Don't await - let it run in background
+      import('@/lib/integration').then(({ analyzeApplication }) => {
+        analyzeApplication(candidate.id, true, true).catch((error) => {
+          console.error(`Error analyzing application ${candidate.id}:`, error);
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,

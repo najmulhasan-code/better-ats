@@ -51,7 +51,7 @@ export default function CandidatesPage() {
         candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         candidate.currentRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        candidate.skillMatch.some((skill) =>
+        candidate.skillMatch.some((skill: string) =>
           skill.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
@@ -185,7 +185,7 @@ export default function CandidatesPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mb-4">
-                {candidate.skillMatch.map((skill) => (
+                {candidate.skillMatch.map((skill: string) => (
                   <span
                     key={skill}
                     className="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded"
@@ -233,7 +233,7 @@ export default function CandidatesPage() {
                   AI Match Analysis for {candidate.jobTitle}
                 </h4>
                 <ul className="space-y-2">
-                  {candidate.matchReasons.map((reason, idx) => (
+                  {candidate.matchReasons.map((reason: string, idx: number) => (
                     <li
                       key={idx}
                       className="text-sm text-slate-700 flex items-start gap-2"

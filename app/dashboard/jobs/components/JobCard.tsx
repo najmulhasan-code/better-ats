@@ -9,12 +9,12 @@ interface JobCardProps {
   job: {
     id: string;
     title: string;
-    description: string;
-    location: string;
-    type: string;
-    salary: string;
+    description?: string;
+    location?: string;
+    type?: string;
+    salary?: string;
     applicants?: number;
-    posted: string;
+    posted?: string;
     status?: string;
   };
   companySlug: string;

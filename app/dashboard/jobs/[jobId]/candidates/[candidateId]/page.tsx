@@ -53,9 +53,10 @@ export default function CandidateProfilePage({ params }: CandidateProfilePagePro
 
       setDataLoading(true);
       try {
+        let candidateData: any = null;
         const candidateResponse = await fetch(`/api/dashboard/jobs/${jobId}/candidates/${candidateId}`);
         if (candidateResponse.ok) {
-          const candidateData = await candidateResponse.json();
+          candidateData = await candidateResponse.json();
           setCandidate(candidateData.candidate);
         }
 
@@ -65,17 +66,50 @@ export default function CandidateProfilePage({ params }: CandidateProfilePagePro
           setJob(jobData.job);
         }
 
-        // Fetch analysis data (if available)
+        // Fetch analysis data (if available). If no analysis exists yet,
+        // automatically trigger it (POST) so the AI analysis runs without
+        // requiring a manual click.
         setAnalysisLoading(true);
         try {
           const analysisResponse = await fetch(`/api/dashboard/jobs/${jobId}/candidates/${candidateId}/analyze`);
+          let analysisData: any = null;
           if (analysisResponse.ok) {
-            const analysisData = await analysisResponse.json();
+            analysisData = await analysisResponse.json();
             if (analysisData.analysis) {
               setAnalysis(analysisData.analysis);
             }
           }
-          // If analysis fails (400/404), it's okay - we'll show the "Run Analysis" button
+
+          // If analysis wasn't returned, attempt to trigger it automatically.
+          // Only POST if we have a candidate and job loaded and if analysis is not present.
+          if ((!analysisData || !analysisData.analysis) && candidateData?.candidate) {
+            // Avoid triggering if candidate already has an aiScore or analyzedAt timestamp
+            const alreadyAnalyzed = candidateData.candidate.aiScore > 0 || !!candidateData.candidate.analyzedAt;
+            if (!alreadyAnalyzed) {
+              try {
+                setAnalyzing(true);
+                const postResp = await fetch(`/api/dashboard/jobs/${jobId}/candidates/${candidateId}/analyze`, {
+                  method: 'POST',
+                });
+                if (postResp.ok) {
+                  const postData = await postResp.json();
+                  if (postData.analysis) {
+                    setAnalysis(postData.analysis);
+                  }
+                  // Refresh candidate to pick up aiScore/analyzedAt
+                  const refreshed = await fetch(`/api/dashboard/jobs/${jobId}/candidates/${candidateId}`);
+                  if (refreshed.ok) {
+                    const refreshedData = await refreshed.json();
+                    setCandidate(refreshedData.candidate);
+                  }
+                }
+              } catch (e) {
+                console.error('Error auto-triggering analysis:', e);
+              } finally {
+                setAnalyzing(false);
+              }
+            }
+          }
         } catch (error) {
           console.error('Error fetching analysis:', error);
           // Silently fail - analysis might not be available yet
@@ -115,10 +149,11 @@ export default function CandidateProfilePage({ params }: CandidateProfilePagePro
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-    if (score >= 60) return 'text-blue-700 bg-blue-50 border-blue-200';
-    if (score >= 40) return 'text-yellow-700 bg-yellow-50 border-yellow-200';
+  const getScoreColor = (score: number | null | undefined) => {
+    const numScore = typeof score === 'number' && !isNaN(score) ? score : 0;
+    if (numScore >= 80) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+    if (numScore >= 60) return 'text-blue-700 bg-blue-50 border-blue-200';
+    if (numScore >= 40) return 'text-yellow-700 bg-yellow-50 border-yellow-200';
     return 'text-red-700 bg-red-50 border-red-200';
   };
 
@@ -342,131 +377,108 @@ export default function CandidateProfilePage({ params }: CandidateProfilePagePro
           </div>
         ) : analysis ? (
           <div className="space-y-6">
-            {/* Scores Grid */}
+            {/* Scores Grid - Always show if analysis exists */}
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="text-[12px] text-slate-600 font-medium mb-1">Final Score</div>
                 <div className={`text-2xl font-bold ${getScoreColor(analysis.finalScore).split(' ')[0]}`}>
-                  {Math.round(analysis.finalScore)}%
+                  {typeof analysis.finalScore === 'number' && !isNaN(analysis.finalScore) ? Math.round(analysis.finalScore) : 0}%
                 </div>
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="text-[12px] text-slate-600 font-medium mb-1">Resume Score</div>
                 <div className={`text-2xl font-bold ${getScoreColor(analysis.resumeScore).split(' ')[0]}`}>
-                  {Math.round(analysis.resumeScore)}%
+                  {typeof analysis.resumeScore === 'number' && !isNaN(analysis.resumeScore) ? Math.round(analysis.resumeScore) : 0}%
                 </div>
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="text-[12px] text-slate-600 font-medium mb-1">Cover Letter Score</div>
                 <div className={`text-2xl font-bold ${getScoreColor(analysis.questioneryScore).split(' ')[0]}`}>
-                  {Math.round(analysis.questioneryScore)}%
+                  {typeof analysis.questioneryScore === 'number' && !isNaN(analysis.questioneryScore) ? Math.round(analysis.questioneryScore) : 0}%
                 </div>
               </div>
             </div>
 
-            {/* Hiring Recommendation */}
-            {analysis.hiringRecommendation && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-[13px] text-slate-600 font-medium mb-2">Hiring Recommendation</div>
-                <div className={`inline-flex px-3 py-1.5 rounded-lg text-[14px] font-semibold border ${getRecommendationColor(analysis.hiringRecommendation)}`}>
-                  {analysis.hiringRecommendation.replace('_', ' ').toUpperCase()}
-                </div>
+            {/* Recruiter Remarks - Always show if available */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle size={18} className="text-blue-600" />
+                <h3 className="text-[15px] font-semibold text-slate-900">Recruiter Remarks</h3>
               </div>
-            )}
-
-            {/* Strengths */}
-            {analysis.overallStrengths && analysis.overallStrengths.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp size={18} className="text-emerald-600" />
-                  <h3 className="text-[15px] font-semibold text-slate-900">Strengths</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.overallStrengths.map((strength: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-[13px] font-medium"
-                    >
-                      {strength}
-                    </span>
-                  ))}
-                </div>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {analysis.recruiterRemarks || 'No remarks available yet.'}
+                </p>
               </div>
-            )}
+            </div>
 
-            {/* Weaknesses */}
-            {analysis.overallWeaknesses && analysis.overallWeaknesses.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingDown size={18} className="text-red-600" />
-                  <h3 className="text-[15px] font-semibold text-slate-900">Weaknesses</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.overallWeaknesses.map((weakness: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[13px] font-medium"
-                    >
-                      {weakness}
-                    </span>
-                  ))}
-                </div>
+            {/* Overall Strengths - Always show section, even if empty */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp size={18} className="text-emerald-600" />
+                <h3 className="text-[15px] font-semibold text-slate-900">Overall Strengths</h3>
               </div>
-            )}
-
-            {/* Recommendations */}
-            {analysis.recommendations && analysis.recommendations.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle size={18} className="text-blue-600" />
-                  <h3 className="text-[15px] font-semibold text-slate-900">Recommendations</h3>
-                </div>
+              {analysis.overallStrongPoints && analysis.overallStrongPoints.length > 0 ? (
                 <ul className="space-y-2">
-                  {analysis.recommendations.map((recommendation: string, index: number) => (
+                  {analysis.overallStrongPoints.map((strength: string, index: number) => (
                     <li key={index} className="flex items-start gap-2 text-[14px] text-slate-700">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>{recommendation}</span>
+                      <span className="text-emerald-600 mt-1">✓</span>
+                      <span>{strength}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
-
-            {/* Comprehensive Analysis */}
-            {analysis.comprehensiveAnalysis && (
-              <div>
-                <h3 className="text-[15px] font-semibold text-slate-900 mb-3">Comprehensive Analysis</h3>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {analysis.comprehensiveAnalysis}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Detailed Analysis */}
-            <div className="grid grid-cols-2 gap-4">
-              {analysis.resumeKeyInfo && (
-                <div>
-                  <h3 className="text-[15px] font-semibold text-slate-900 mb-3">Resume Analysis</h3>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 max-h-64 overflow-y-auto">
-                    <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {analysis.resumeKeyInfo}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {analysis.questioneryKeyInfo && (
-                <div>
-                  <h3 className="text-[15px] font-semibold text-slate-900 mb-3">Cover Letter Analysis</h3>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 max-h-64 overflow-y-auto">
-                    <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {analysis.questioneryKeyInfo}
-                    </p>
-                  </div>
-                </div>
+              ) : (
+                <p className="text-[14px] text-slate-500 italic">No strengths identified yet.</p>
               )}
             </div>
+
+            {/* Overall Weaknesses - Always show section, even if empty */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingDown size={18} className="text-red-600" />
+                <h3 className="text-[15px] font-semibold text-slate-900">Overall Weaknesses</h3>
+              </div>
+              {analysis.overallWeakPoints && analysis.overallWeakPoints.length > 0 ? (
+                <ul className="space-y-2">
+                  {analysis.overallWeakPoints.map((weakness: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2 text-[14px] text-slate-700">
+                      <span className="text-red-600 mt-1">✗</span>
+                      <span>{weakness}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[14px] text-slate-500 italic">No weaknesses identified yet.</p>
+              )}
+            </div>
+
+            {/* Private Directions Compliance - Only show if job has private directions AND analysis has compliance data */}
+            {job?.privateDirections && job.privateDirections.trim() && analysis.privateDirectionsCompliance && (
+              <div>
+                <h3 className="text-[15px] font-semibold text-slate-900 mb-3">Private Directions Compliance</h3>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`px-3 py-1 rounded-lg text-[13px] font-semibold ${
+                      analysis.privateDirectionsCompliance.meetsRequirements 
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                        : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}>
+                      {analysis.privateDirectionsCompliance.meetsRequirements ? 'Meets Requirements' : 'Does Not Meet Requirements'}
+                    </div>
+                    <div className="text-[13px] text-slate-600">
+                      Compliance Score: {typeof analysis.privateDirectionsCompliance.complianceScore === 'number' && !isNaN(analysis.privateDirectionsCompliance.complianceScore) 
+                        ? Math.round(analysis.privateDirectionsCompliance.complianceScore) 
+                        : 0}%
+                    </div>
+                  </div>
+                  {analysis.privateDirectionsCompliance.reasoning && (
+                    <p className="text-[13px] text-slate-700 leading-relaxed mt-2">
+                      {analysis.privateDirectionsCompliance.reasoning}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-8">
@@ -523,20 +535,30 @@ export default function CandidateProfilePage({ params }: CandidateProfilePagePro
         <div className="bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-2xl p-8 shadow-xl">
           <h2 className="text-[18px] font-semibold text-slate-900 mb-6">Screening Questions</h2>
           <div className="space-y-5">
-            {knockoutResponses.map((response: any) => (
-              <div key={response.id} className="pb-5 border-b border-slate-200/60 last:border-0 last:pb-0">
-                <div className="text-[14px] font-semibold text-slate-900 mb-2">{response.questionId}</div>
-                <div
-                  className={`inline-flex px-3 py-1.5 rounded-lg text-[13px] font-semibold ${
-                    response.answer?.value === 'yes'
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}
-                >
-                  {response.answer?.value === 'yes' ? 'Yes' : 'No'}
+            {knockoutResponses.map((response: any) => {
+              // For sponsorship question: "no" (doesn't need sponsorship) is positive (green)
+              // For other questions: "yes" is typically positive (green)
+              const isSponsorship = response.questionId?.toLowerCase() === 'sponsorship';
+              const answerValue = response.answer?.value;
+              const isPositive = isSponsorship 
+                ? answerValue === 'no' // For sponsorship, "no" is positive
+                : answerValue === 'yes'; // For other questions, "yes" is positive
+              
+              return (
+                <div key={response.id} className="pb-5 border-b border-slate-200/60 last:border-0 last:pb-0">
+                  <div className="text-[14px] font-semibold text-slate-900 mb-2">{response.questionId}</div>
+                  <div
+                    className={`inline-flex px-3 py-1.5 rounded-lg text-[13px] font-semibold ${
+                      isPositive
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    {answerValue === 'yes' ? 'Yes' : 'No'}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

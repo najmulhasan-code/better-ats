@@ -69,6 +69,7 @@ export default function CreateJobPage() {
   const [responsibilities, setResponsibilities] = useState<string[]>(['']);
   const [requirements, setRequirements] = useState<string[]>(['']);
   const [niceToHave, setNiceToHave] = useState<string[]>(['']);
+  const [privateDirections, setPrivateDirections] = useState('');
 
   // Standard application fields
   const [standardFields, setStandardFields] = useState<StandardField[]>([
@@ -341,6 +342,7 @@ export default function CreateJobPage() {
           responsibilities: responsibilities.filter((r) => r.trim()),
           requirements: requirements.filter((r) => r.trim()),
           niceToHave: niceToHave.filter((n) => n.trim()),
+          privateDirections: privateDirections.trim() || null,
           status,
           // Application form configuration
           applicationForm: {
@@ -640,6 +642,39 @@ export default function CreateJobPage() {
                       Add Requirement
                     </button>
                   </div>
+                </div>
+
+                {/* Private Directions */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h2 className="text-lg font-bold text-slate-900">Private Directions</h2>
+                      <div className="group relative">
+                        <Info size={16} className="text-slate-400 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-72 p-3 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                          <p className="font-semibold mb-2">Internal Notes for AI Analysis</p>
+                          <p className="mb-2">These private directions will be used by AI to sort and rank candidates. They are <strong>NOT visible to applicants</strong>.</p>
+                          <p className="mb-1"><strong>Examples:</strong></p>
+                          <ul className="list-disc list-inside space-y-1 text-slate-300">
+                            <li>"Priority to US citizens"</li>
+                            <li>"Must have 5+ years experience"</li>
+                            <li>"Prefer candidates from tech companies"</li>
+                            <li>"Require specific certification"</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      Internal notes that will influence candidate ranking and sorting (not visible to applicants)
+                    </p>
+                  </div>
+                  <textarea
+                    value={privateDirections}
+                    onChange={(e) => setPrivateDirections(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 resize-none"
+                    placeholder="e.g., Priority to US citizens, Must have experience with cloud infrastructure, Prefer candidates from tech companies..."
+                  />
                 </div>
 
                 {/* Nice to Have */}

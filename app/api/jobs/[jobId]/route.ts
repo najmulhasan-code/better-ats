@@ -129,12 +129,45 @@ export async function PATCH(
     if (body.responsibilities !== undefined) updateData.responsibilities = body.responsibilities;
     if (body.requirements !== undefined) updateData.requirements = body.requirements;
     if (body.niceToHave !== undefined) updateData.niceToHave = body.niceToHave;
+    if (body.privateDirections !== undefined) updateData.privateDirections = body.privateDirections;
+
+    // Check if private directions changed (will trigger re-ranking)
+    const privateDirectionsChanged = body.privateDirections !== undefined && 
+      body.privateDirections !== job.privateDirections;
 
     // Update job
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: updateData,
     });
+
+    // If private directions changed, trigger re-analysis and re-ranking
+    if (privateDirectionsChanged && process.env.ANTHROPIC_API_KEY) {
+      // Re-analyze all candidates and re-rank (async, don't block response)
+      import('@/lib/integration').then(({ analyzeApplication }) => {
+        import('@/lib/ranking/comparative').then(({ rankCandidatesForJob }) => {
+          // Get all candidates for this job
+          prisma.candidate.findMany({
+            where: { jobId: jobId },
+            select: { id: true },
+          }).then((candidates) => {
+            // Re-analyze all candidates
+            Promise.all(
+              candidates.map(candidate => 
+                analyzeApplication(candidate.id, true, false).catch((error) => {
+                  console.error(`Error re-analyzing candidate ${candidate.id}:`, error);
+                })
+              )
+            ).then(() => {
+              // Re-rank after all analyses complete
+              rankCandidatesForJob(jobId).catch((error) => {
+                console.error(`Error re-ranking job ${jobId}:`, error);
+              });
+            });
+          });
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,

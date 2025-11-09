@@ -55,6 +55,10 @@ model Job {
   responsibilities String[]         @default([])
   requirements     String[]         @default([])
   niceToHave       String[]         @default([]) @map("nice_to_have")
+  privateDirections String?         @db.Text @map("private_directions")
+  sortingAlgorithm  String?         @default("llm_comparative_ranking_v1") @map("sorting_algorithm")
+  lastRankedAt      DateTime?       @map("last_ranked_at")
+  rankingVersion    String?         @default("1.0") @map("ranking_version")
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   applicationForm  ApplicationForm?
@@ -116,6 +120,26 @@ model Candidate {
   overallWeaknesses    String[]              @default([]) @map("overall_weaknesses")
   recommendations      String[]              @default([]) @map("recommendations")
   
+  // Enhanced Analysis (LLM-driven)
+  resumeStrongPoints      String[]              @default([]) @map("resume_strong_points")
+  resumeWeakPoints        String[]              @default([]) @map("resume_weak_points")
+  questioneryStrongPoints String[]              @default([]) @map("questionery_strong_points")
+  questioneryWeakPoints   String[]              @default([]) @map("questionery_weak_points")
+  recruiterRemarks        String?               @db.Text @map("recruiter_remarks")
+  
+  // Private Directions Compliance
+  privateDirectionsCompliance Json?             @map("private_directions_compliance")
+  
+  // Ranking (from comparative LLM ranking)
+  rankingScore            Float?                @map("ranking_score")
+  rankPosition            Int?                  @map("rank_position")
+  rankingReasoning        String?               @db.Text @map("ranking_reasoning")
+  keyDifferentiators      String[]              @default([]) @map("key_differentiators")
+  rankingAlgorithm        String?               @map("ranking_algorithm")
+  
+  // Questionery Data (consolidated)
+  questioneryData         Json?                 @map("questionery_data")
+  
   // Parsed Resume Data (from resume.ts - ParsedResumeData)
   parsedResumeData     Json?                 @map("parsed_resume_data")
   resumeSkills         String[]              @default([]) @map("resume_skills")
@@ -137,6 +161,8 @@ model Candidate {
   @@index([email])
   @@index([finalScore])
   @@index([analyzedAt])
+  @@index([rankingScore])
+  @@index([rankPosition])
   @@map("candidates")
 }
 

@@ -12,6 +12,10 @@ interface Job {
   location: string;
   status: string;
   applicants?: number;
+  description?: string;
+  type?: string;
+  salary?: string;
+  posted?: string;
 }
 
 export default function JobsPage() {

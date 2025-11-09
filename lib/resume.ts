@@ -246,8 +246,16 @@ export async function parsePdfBuffer(
     try {
       return await extractResumeWithLLM(text);
     } catch (error: any) {
-      console.warn('LLM extraction failed:', error.message);
-      // Return raw text if LLM fails
+      // Check if it's a model error - if so, log it but still return raw text
+      const errorMessage = (error?.message || '').toLowerCase();
+      const isModelError = errorMessage.includes('not_found_error') || errorMessage.includes('model:') || errorMessage.includes('404');
+      if (isModelError) {
+        console.warn('LLM extraction failed due to model error:', error.message);
+        console.warn('Falling back to raw text extraction. Please check your ANTHROPIC_MODEL environment variable.');
+      } else {
+        console.warn('LLM extraction failed:', error.message);
+      }
+      // Return raw text if LLM fails (model error or other error)
       return { rawText: text };
     }
   }

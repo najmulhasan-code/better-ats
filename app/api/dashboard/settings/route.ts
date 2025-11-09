@@ -37,15 +37,13 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { name, description, departments, locations, jobTypes } = body;
 
-    // Update company
+    // Update company (only update fields that exist on the schema)
     const updatedCompany = await prisma.company.update({
       where: { id: user.company.id },
       data: {
         name: name || user.company.name,
         description: description || user.company.description,
-        departments: departments || user.company.departments,
-        locations: locations || user.company.locations,
-        jobTypes: jobTypes || user.company.jobTypes,
+        website: body.website || user.company.website,
       },
     });
 

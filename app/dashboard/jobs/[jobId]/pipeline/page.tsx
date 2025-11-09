@@ -315,7 +315,7 @@ export default function JobPipelinePage() {
 
                                   {/* Skills - Compact */}
                                   <div className="flex flex-wrap gap-1 mb-2">
-                                    {candidate.skillMatch.slice(0, 2).map((skill) => (
+                                    {candidate.skillMatch.slice(0, 2).map((skill: string) => (
                                       <span
                                         key={skill}
                                         className="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-700 rounded"
