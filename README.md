@@ -10,7 +10,7 @@ Traditional ATS systems rely on keyword matching, leading to qualified candidate
 
 ## The Solution
 
-betterATS leverages advanced AI to perform semantic analysis of entire applications. The system evaluates candidates holistically—analyzing their resume, cover letter, portfolio, and responses—against job requirements and recruiter-defined private directions. This results in rankings that reflect actual candidate quality and fit, not just keyword density.
+betterATS leverages advanced AI to perform semantic analysis of entire applications. The system evaluates candidates holistically - analyzing their resume, cover letter, portfolio, and responses - against job requirements and recruiter-defined private directions. This results in rankings that reflect actual candidate quality and fit, not just keyword density.
 
 ## Key Features
 
@@ -90,4 +90,4 @@ npm start
 
 ## License
 
-Proprietary - All rights reserved
+MIT License
