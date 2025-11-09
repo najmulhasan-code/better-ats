@@ -1,17 +1,13 @@
 /**
- * Client-Side Authentication Utilities
- * 
- * Use these functions in Client Components only
+ * Client-Side Authentication
+ * Use in Client Components only
  */
 
 import { createClient } from '../supabase/client';
 
-/**
- * Sign in with Google (client-side)
- */
 export async function signInWithGoogle(redirectTo: string = '/dashboard') {
   const supabase = createClient();
-  
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -23,36 +19,19 @@ export async function signInWithGoogle(redirectTo: string = '/dashboard') {
     },
   });
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data;
 }
 
-/**
- * Sign out (client-side)
- */
 export async function signOut() {
   const supabase = createClient();
   const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 }
 
-/**
- * Get current user (client-side)
- */
-export async function getCurrentUser() {
+export async function getCurrentUserClient() {
   const supabase = createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error || !user) {
-    return null;
-  }
-  
+  if (error || !user) return null;
   return user;
 }
-

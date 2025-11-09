@@ -19,6 +19,11 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // Skip middleware for auth callback routes to avoid consuming OAuth flow state
+  if (request.nextUrl.pathname.startsWith('/api/auth/callback')) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,6 +58,15 @@ export async function middleware(request: NextRequest) {
       url.searchParams.set('redirect_to', request.nextUrl.pathname);
       return NextResponse.redirect(url);
     }
+
+    // Note: Database checks (onboarding, user profile) are handled in API routes
+    // Middleware runs on Edge Runtime which doesn't support Prisma
+    // API routes will redirect to onboarding if user profile is missing
+  }
+
+  // Allow onboarding access for authenticated users
+  if (request.nextUrl.pathname.startsWith('/onboarding') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // Redirect authenticated users away from login

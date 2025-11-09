@@ -1,31 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #1d1d1f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* macOS-like shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+
+  /* macOS-like rounded corners */
+  --radius-lg: 12px;
+  --radius: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   cursor: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='3' fill='%235371FE'/%3E%3Ccircle cx='10' cy='10' r='1.5' fill='white'/%3E%3C/svg%3E") 10 10, auto;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
 }
 
 /* Hide cursor on touch devices */
@@ -33,11 +39,17 @@ body {
   body {
     cursor: auto;
   }
-  
+
   /* Hide custom cursor on touch devices */
   [class*="cursor"] {
     display: none !important;
   }
+}
+
+/* macOS-like focus rings */
+*:focus-visible {
+  outline: 2px solid rgb(0 122 255 / 0.5);
+  outline-offset: 2px;
 }
 
 /* Custom animations */
@@ -392,4 +404,115 @@ section[data-scroll-section] {
 ::-moz-selection {
   background-color: #14b8a6;
   color: white;
+}
+
+/* Smooth animations for all interactive elements */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Override for elements that shouldn't animate */
+*[class*="duration-"],
+*[class*="transition-"] {
+  transition: inherit;
+}
+
+/* Smooth button interactions */
+button, a, [role="button"] {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity, background-color, box-shadow;
+}
+
+button:active, a:active, [role="button"]:active {
+  transform: scale(0.98);
+}
+
+/* Smooth card hover effects */
+[class*="hover:shadow"],
+[class*="group"] {
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth input focus effects */
+input, textarea, select {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page transition effects */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: page-fade-in 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal animations */
+@keyframes modal-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-content-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-overlay-enter {
+  animation: modal-overlay-fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-content-enter {
+  animation: modal-content-scale-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dropdown menu animations */
+@keyframes dropdown-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-enter {
+  animation: dropdown-slide-down 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading skeleton shimmer */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }

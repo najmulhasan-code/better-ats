@@ -1,15 +1,38 @@
 /**
- * Authentication Utilities - Main Export
- * 
- * This file exports the appropriate functions based on usage context.
- * For explicit imports, use:
- * - @/lib/auth/client for client-side functions
- * - @/lib/auth/server for server-side functions
+ * Authentication Module
+ * Central export point for all auth functions
  */
 
-// Re-export client functions (for convenience, but prefer direct imports)
-export * from './client';
+// Client-side exports (safe for client components)
+export {
+  signInWithGoogle,
+  signOut,
+  getCurrentUserClient,
+} from './client';
 
-// Server functions are not exported here to avoid bundling issues
-// Import directly from './server' in server components/API routes
+// Client-side hooks
+export {
+  useCurrentUser,
+  useCurrentCompany,
+} from './hooks';
 
+// Server-side exports (use dynamic import for better tree-shaking)
+export async function getCurrentUser() {
+  const { getCurrentUser: fn } = await import('./server');
+  return fn();
+}
+
+export async function isAuthenticated() {
+  const { isAuthenticated: fn } = await import('./server');
+  return fn();
+}
+
+export async function getCurrentUserWithCompany() {
+  const { getCurrentUserWithCompany: fn } = await import('./server');
+  return fn();
+}
+
+export async function getCurrentCompany() {
+  const { getCurrentCompany: fn } = await import('./helpers');
+  return fn();
+}

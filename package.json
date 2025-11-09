@@ -21,17 +21,24 @@
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@prisma/client": "^5.22.0",
     "@remotion/bundler": "^4.0.373",
     "@remotion/player": "^4.0.373",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
+    "lucide-react": "^0.553.0",
     "next": "16.0.1",
+    "openai": "^6.8.1",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "remotion": "^4.0.373"
+    "recharts": "^3.3.0",
+    "remotion": "^4.0.373",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
