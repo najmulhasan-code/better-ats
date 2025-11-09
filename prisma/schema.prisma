@@ -1,7 +1,3 @@
-// Better ATS - Prisma Schema
-// This is the source of truth for database structure
-// Run `npm run db:push` to sync changes to the database
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,194 +7,122 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// ENUMS
-// ============================================================================
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String?
+  avatarUrl   String?  @map("avatar_url")
+  companySlug String   @map("company_slug")
+  role        String   @default("recruiter")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  company     Company  @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
 
-enum EmploymentType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-  INTERNSHIP
-  TEMPORARY
-  @@map("employment_type")
+  @@index([companySlug])
+  @@index([email])
+  @@map("users")
 }
 
-enum JobPostingStatus {
-  ACTIVE
-  DRAFT
-  CLOSED
-  @@map("job_posting_status")
-}
-
-enum ApplicationStage {
-  APPLIED
-  SCREENING
-  INTERVIEW
-  OFFER
-  HIRED
-  REJECTED
-  @@map("application_stage")
-}
-
-enum InterviewType {
-  PHONE
-  VIDEO
-  ONSITE
-  TECHNICAL
-  BEHAVIORAL
-  PANEL
-  @@map("interview_type")
-}
-
-enum InterviewStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  RESCHEDULED
-  NO_SHOW
-  @@map("interview_status")
-}
-
-// ============================================================================
-// COMPANY MODELS
-// ============================================================================
-
-/// Company information
 model Company {
-  id          String    @id @default(uuid()) @db.Uuid
-  slug        String    @unique @db.VarChar(100)
-  name        String    @db.VarChar(255)
-  website     String?   @db.VarChar(255)
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  jobPostings JobPosting[]
+  id          String      @id @default(uuid())
+  slug        String      @unique
+  name        String
+  description String?
+  website     String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  candidates  Candidate[]
+  jobs        Job[]
+  users       User[]
 
   @@map("companies")
-  @@index([name])
-  @@index([slug])
 }
 
-// ============================================================================
-// JOB POSTING MODELS
-// ============================================================================
+model Job {
+  id               String           @id @default(uuid())
+  companySlug      String           @map("company_slug")
+  title            String
+  department       String
+  location         String
+  type             String
+  salary           String?
+  applicants       Int              @default(0)
+  posted           String?
+  postedTimestamp  BigInt?          @map("posted_timestamp")
+  status           String           @default("draft")
+  description      String?
+  fullDescription  String?          @map("full_description")
+  responsibilities String[]         @default([])
+  requirements     String[]         @default([])
+  niceToHave       String[]         @default([]) @map("nice_to_have")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  applicationForm  ApplicationForm?
+  candidates       Candidate[]
+  company          Company          @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
 
-/// Job posting/opening
-model JobPosting {
-  id               String            @id @default(uuid()) @db.Uuid
-  companyId        String            @map("company_id") @db.Uuid
-  title            String            @db.VarChar(255)
-  department       String            @db.VarChar(100)
-  location         String            @db.VarChar(255)
-  employmentType   EmploymentType    @map("employment_type")
-  salary           String?           @db.VarChar(100)
-  description      String?           @db.Text
-  fullDescription  String?           @map("full_description") @db.Text
-  responsibilities String[]          @default([])
-  requirements     String[]          @default([])
-  niceToHave       String[]          @map("nice_to_have") @default([])
-  status           JobPostingStatus  @default(DRAFT)
-  postedAt         DateTime?         @map("posted_at") @db.Timestamptz(6)
-  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  applications Application[]
-
-  @@map("job_postings")
-  @@index([companyId])
+  @@index([companySlug])
   @@index([status])
-  @@index([employmentType])
-  @@index([department])
-  @@index([createdAt])
+  @@map("jobs")
 }
 
-// ============================================================================
-// CANDIDATE MODELS
-// ============================================================================
+model ApplicationForm {
+  id                String   @id @default(uuid())
+  jobId             String   @unique @map("job_id")
+  standardFields    Json     @default("[]")
+  knockoutQuestions Json     @default("[]")
+  customQuestions   Json     @default("[]")
+  eeoFields         Json     @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  job               Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-/// Candidate/Applicant information
+  @@map("application_forms")
+}
+
 model Candidate {
-  id           String   @id @default(uuid()) @db.Uuid
-  firstName    String   @map("first_name") @db.VarChar(100)
-  lastName     String   @map("last_name") @db.VarChar(100)
-  email        String   @unique @db.VarChar(255)
-  phone        String?  @db.VarChar(50)
-  resumeUrl    String?  @map("resume_url") @db.Text
-  linkedinUrl  String?  @map("linkedin_url") @db.VarChar(255)
-  portfolioUrl String?  @map("portfolio_url") @db.VarChar(255)
-  aiScore      Int?     @map("ai_score") @db.Integer
-  notes        String?  @db.Text
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                   String                @id @default(uuid())
+  companySlug          String                @map("company_slug")
+  jobId                String                @map("job_id")
+  name                 String
+  email                String
+  phone                String?
+  linkedin             String?
+  portfolio            String?
+  appliedDate          String                @map("applied_date")
+  appliedDateTimestamp BigInt                @map("applied_date_timestamp")
+  aiScore              Int                   @map("ai_score")
+  stage                String                @default("applied")
+  jobTitle             String                @map("job_title")
+  matchReasons         String[]              @default([]) @map("match_reasons")
+  skillMatch           String[]              @default([]) @map("skill_match")
+  experience           String?
+  currentRole          String?               @map("current_role")
+  education            String?
+  resumeFile           String?               @map("resume_file")
+  coverLetter          String?               @map("cover_letter")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  applicationResponses ApplicationResponse[]
+  company              Company               @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
+  job                  Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  // Relations
-  applications Application[]
-
-  @@map("candidates")
-  @@index([email])
-  @@index([firstName, lastName])
-  @@index([createdAt])
-}
-
-// ============================================================================
-// APPLICATION MODELS
-// ============================================================================
-
-/// Job application - links candidates to job postings
-model Application {
-  id            String           @id @default(uuid()) @db.Uuid
-  jobPostingId  String           @map("job_posting_id") @db.Uuid
-  candidateId   String           @map("candidate_id") @db.Uuid
-  stage         ApplicationStage @default(APPLIED)
-  coverLetter   String?          @map("cover_letter") @db.Text
-  matchReasons  String[]         @map("match_reasons") @default([])
-  skillMatch    String[]         @map("skill_match") @default([])
-  experience    String?          @db.VarChar(255)
-  currentRole   String?          @map("current_role") @db.VarChar(255)
-  education     String?          @db.VarChar(255)
-  appliedAt     DateTime         @default(now()) @map("applied_at") @db.Timestamptz(6)
-  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  jobPosting JobPosting  @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
-  candidate  Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  interviews Interview[]
-
-  @@unique([jobPostingId, candidateId])
-  @@map("applications")
-  @@index([jobPostingId])
-  @@index([candidateId])
+  @@index([companySlug])
+  @@index([jobId])
   @@index([stage])
-  @@index([appliedAt])
+  @@index([email])
+  @@map("candidates")
 }
 
-// ============================================================================
-// INTERVIEW MODELS
-// ============================================================================
+model ApplicationResponse {
+  id          String    @id @default(uuid())
+  candidateId String    @map("candidate_id")
+  questionId  String    @map("question_id")
+  answer      Json
+  createdAt   DateTime  @default(now()) @map("created_at")
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
-/// Interview scheduling and tracking
-model Interview {
-  id            String          @id @default(uuid()) @db.Uuid
-  applicationId String          @map("application_id") @db.Uuid
-  interviewType InterviewType?  @map("interview_type")
-  scheduledAt   DateTime?       @map("scheduled_at") @db.Timestamptz(6)
-  location      String?         @db.VarChar(255)
-  notes         String?         @db.Text
-  status        InterviewStatus @default(SCHEDULED)
-  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  @@map("interviews")
-  @@index([applicationId])
-  @@index([status])
-  @@index([scheduledAt])
-  @@index([interviewType])
+  @@index([candidateId])
+  @@index([questionId])
+  @@map("application_responses")
 }

@@ -19,6 +19,11 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // Skip middleware for auth callback routes to avoid consuming OAuth flow state
+  if (request.nextUrl.pathname.startsWith('/api/auth/callback')) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,6 +58,31 @@ export async function middleware(request: NextRequest) {
       url.searchParams.set('redirect_to', request.nextUrl.pathname);
       return NextResponse.redirect(url);
     }
+
+    // Check if user exists in database (has completed onboarding)
+    try {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email! },
+        include: { company: true }
+      });
+      await prisma.$disconnect();
+
+      // If user exists in Supabase but not in database, redirect to onboarding
+      if (!dbUser) {
+        console.log('[Middleware] User needs onboarding:', user.email);
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
+    } catch (error) {
+      console.error('[Middleware] Database check error:', error);
+      // On error, let them through - API will handle auth properly
+    }
+  }
+
+  // Allow onboarding access for authenticated users
+  if (request.nextUrl.pathname.startsWith('/onboarding') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // Redirect authenticated users away from login

@@ -1,327 +1,355 @@
+/**
+ * Dashboard Overview
+ * Clean, macOS-style dashboard with real-time metrics
+ */
+
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
+  TrendingUp,
   Users,
   Briefcase,
   Target,
-  Activity,
   ArrowRight,
-  Star,
 } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { CURRENT_COMPANY } from '@/lib/auth';
-import { mockJobs, mockCandidates, PIPELINE_STAGES } from '@/lib/mockData';
+
+const PIPELINE_STAGES = [
+  { id: 'applied', name: 'Applied', color: '#64748b' },
+  { id: 'screening', name: 'Screening', color: '#3b82f6' },
+  { id: 'interview', name: 'Interview', color: '#8b5cf6' },
+  { id: 'offer', name: 'Offer', color: '#10b981' },
+  { id: 'hired', name: 'Hired', color: '#059669' },
+];
+
+interface Job {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  status: string;
+  postedTimestamp: string | null;
+}
+
+interface Candidate {
+  id: string;
+  name: string;
+  email: string;
+  jobId: string;
+  jobTitle: string;
+  stage: string;
+  aiScore: number;
+  appliedDateTimestamp: string;
+}
 
 export default function DashboardPage() {
-  const companyJobs = mockJobs.filter((job) => job.companySlug === CURRENT_COMPANY.slug);
-  const companyCandidates = mockCandidates.filter((c) => c.companySlug === CURRENT_COMPANY.slug);
+  const [companyJobs, setCompanyJobs] = useState<Job[]>([]);
+  const [companyCandidates, setCompanyCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Calculate key metrics
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        console.log('Fetching dashboard stats...');
+        const response = await fetch('/api/dashboard/stats');
+        console.log('Response status:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Dashboard data:', data);
+          setCompanyJobs(data.jobs || []);
+          setCompanyCandidates(data.candidates || []);
+        } else {
+          const error = await response.json();
+          console.error('API error:', error);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const metrics = useMemo(() => {
-    const totalApplications = companyCandidates.length;
-    const avgAIScore =
-      companyCandidates.reduce((sum, c) => sum + c.aiScore, 0) / companyCandidates.length || 0;
-    const offersExtended = companyCandidates.filter((c) => c.stage === 'offer').length;
-    const hired = companyCandidates.filter((c) => c.stage === 'hired').length;
-    const offerAcceptanceRate = offersExtended > 0 ? (hired / offersExtended) * 100 : 0;
+    const activeJobs = companyJobs.filter(j => j.status === 'published').length;
+    const totalCandidates = companyCandidates.length;
+    const thisWeekCandidates = companyCandidates.filter(c => {
+      const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      return Number(c.appliedDateTimestamp) >= weekAgo;
+    }).length;
 
-    // Calculate average time-to-hire (mock data for now)
-    const avgTimeToHire = 18; // days
+    const inReview = companyCandidates.filter(c => ['screening', 'interview'].includes(c.stage)).length;
+    const offers = companyCandidates.filter(c => c.stage === 'offer').length;
+    const hired = companyCandidates.filter(c => c.stage === 'hired').length;
+
+    const avgScore = companyCandidates.length > 0
+      ? Math.round(companyCandidates.reduce((sum, c) => sum + c.aiScore, 0) / companyCandidates.length)
+      : 0;
 
     return {
+      activeJobs,
       totalJobs: companyJobs.length,
-      totalCandidates: totalApplications,
-      avgAIScore: Math.round(avgAIScore),
-      avgTimeToHire,
-      offerAcceptanceRate: Math.round(offerAcceptanceRate),
-      activeApplications: companyCandidates.filter(
-        (c) => !['hired', 'rejected'].includes(c.stage)
-      ).length,
+      totalCandidates,
+      thisWeekCandidates,
+      inReview,
+      offers,
+      hired,
+      avgScore,
     };
   }, [companyJobs, companyCandidates]);
 
-  // Applications over time (last 30 days)
-  const applicationsOverTime = useMemo(() => {
-    // Stable simulated data pattern
-    const pattern = [2, 3, 1, 4, 3, 5, 2, 3, 4, 1, 2, 5, 3, 4, 2, 3, 5, 4, 3, 2, 4, 3, 5, 2, 4, 3, 2, 5, 3, 4];
-    const data = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dayLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-      data.push({
-        date: dayLabel,
-        applications: pattern[29 - i],
-      });
-    }
-    return data;
-  }, []);
-
-  // Pipeline breakdown
-  const pipelineData = useMemo(() => {
-    return PIPELINE_STAGES.filter((stage) => stage.id !== 'rejected').map((stage) => ({
-      name: stage.name,
-      count: companyCandidates.filter((c) => c.stage === stage.id).length,
-      color:
-        stage.id === 'applied'
-          ? '#64748b'
-          : stage.id === 'screening'
-            ? '#3b82f6'
-            : stage.id === 'interview'
-              ? '#8b5cf6'
-              : stage.id === 'offer'
-                ? '#10b981'
-                : '#059669',
+  const pipelineStats = useMemo(() => {
+    return PIPELINE_STAGES.map(stage => ({
+      ...stage,
+      count: companyCandidates.filter(c => c.stage === stage.id).length,
+      percentage: companyCandidates.length > 0
+        ? Math.round((companyCandidates.filter(c => c.stage === stage.id).length / companyCandidates.length) * 100)
+        : 0,
     }));
   }, [companyCandidates]);
 
-  // Recent activity
-  const recentActivity = useMemo(() => {
+  const recentApplications = useMemo(() => {
     return companyCandidates
-      .sort((a, b) => b.appliedDateTimestamp - a.appliedDateTimestamp)
-      .slice(0, 5)
-      .map((candidate) => ({
-        type: 'application',
-        candidate: candidate.name,
-        job: candidate.jobTitle,
-        score: candidate.aiScore,
-        time: candidate.appliedDate,
-      }));
+      .sort((a, b) => Number(b.appliedDateTimestamp) - Number(a.appliedDateTimestamp))
+      .slice(0, 10);
   }, [companyCandidates]);
 
+  const topJobs = useMemo(() => {
+    const jobCounts = companyJobs.map(job => ({
+      ...job,
+      applicantCount: companyCandidates.filter(c => c.jobId === job.id).length,
+    }));
+    return jobCounts.sort((a, b) => b.applicantCount - a.applicantCount).slice(0, 5);
+  }, [companyJobs, companyCandidates]);
+
+  // Show dashboard immediately, even while loading
+  // This eliminates the annoying loading screen
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">Dashboard</h1>
-        <p className="text-sm text-slate-600">
-          Overview of your recruiting activity
-        </p>
+    <div className="space-y-1">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-1 py-4">
+        <h1 className="text-[28px] font-semibold text-slate-900">Overview</h1>
+        <Link
+          href="/dashboard/jobs/new"
+          className="px-4 py-2 bg-[#5371FE] text-white text-[13px] font-medium rounded-lg hover:bg-[#4461ED] active:bg-[#3551DC] transition-colors"
+        >
+          Create Job
+        </Link>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Jobs */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Briefcase className="text-blue-600" size={20} />
+      {/* Key Metrics */}
+      <div className="bg-white border-y border-slate-200">
+        <div className="grid grid-cols-4 divide-x divide-slate-200">
+          <div className="px-6 py-5">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Active Jobs</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-[28px] font-semibold text-slate-900">{metrics.activeJobs}</div>
+              <div className="text-[13px] text-slate-500">of {metrics.totalJobs}</div>
             </div>
-            <h3 className="text-sm font-medium text-slate-600">Active Jobs</h3>
           </div>
-          <p className="text-2xl font-bold text-slate-900">{metrics.totalJobs}</p>
-        </div>
-
-        {/* Total Candidates */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <Users className="text-purple-600" size={20} />
+          <div className="px-6 py-5">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Total Candidates</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-[28px] font-semibold text-slate-900">{metrics.totalCandidates}</div>
+              <div className="flex items-center gap-1 text-[13px] text-green-600 font-medium">
+                <TrendingUp size={13} />
+                {metrics.thisWeekCandidates}
+              </div>
             </div>
-            <h3 className="text-sm font-medium text-slate-600">Total Candidates</h3>
           </div>
-          <p className="text-2xl font-bold text-slate-900">{metrics.totalCandidates}</p>
-        </div>
-
-        {/* Active Applications */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-emerald-50 rounded-lg">
-              <Activity className="text-emerald-600" size={20} />
+          <div className="px-6 py-5">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">In Review</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-[28px] font-semibold text-slate-900">{metrics.inReview}</div>
+              <div className="text-[13px] text-slate-500">{metrics.offers} offers</div>
             </div>
-            <h3 className="text-sm font-medium text-slate-600">Active Applications</h3>
           </div>
-          <p className="text-2xl font-bold text-slate-900">{metrics.activeApplications}</p>
-        </div>
-
-        {/* Avg AI Match Score */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <Star className="text-amber-600" size={20} />
+          <div className="px-6 py-5">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Match Score</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-[28px] font-semibold text-slate-900">{metrics.avgScore}%</div>
+              <div className="text-[13px] text-slate-500">{metrics.hired} hired</div>
             </div>
-            <h3 className="text-sm font-medium text-slate-600">Avg AI Match</h3>
           </div>
-          <p className="text-2xl font-bold text-slate-900">{metrics.avgAIScore}%</p>
         </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Applications Over Time */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Applications Over Time</h2>
-            <p className="text-xs text-slate-500">Last 30 days</p>
-          </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={applicationsOverTime}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis
-                dataKey="date"
-                stroke="#64748b"
-                fontSize={11}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="applications"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+      {/* Pipeline */}
+      <div className="bg-white border-y border-slate-200 mt-1">
+        <div className="px-6 py-3 border-b border-slate-200">
+          <h2 className="text-[13px] font-semibold text-slate-900">Pipeline</h2>
         </div>
-
-        {/* Pipeline Breakdown */}
-        <div className="bg-white rounded-lg border border-slate-200 p-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Pipeline Breakdown</h2>
-            <p className="text-xs text-slate-500">Candidates by stage</p>
-          </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={pipelineData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-              <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                {pipelineData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg border border-slate-200">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Recent Applications</h2>
-          <Link
-            href="/dashboard/candidates"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1"
-          >
-            View all
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {recentActivity.length > 0 ? (
-            recentActivity.map((activity, idx) => (
-              <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
-                      <Users className="text-slate-600" size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-slate-900 text-sm truncate">{activity.candidate}</p>
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded">
-                          {activity.score}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 truncate">
-                        {activity.job} • {activity.time}
-                      </p>
-                    </div>
+        <div className="px-6 py-5">
+          <div className="space-y-3.5">
+            {pipelineStats.map((stage) => (
+              <div key={stage.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                    <span className="text-[13px] font-medium text-slate-900">{stage.name}</span>
                   </div>
-                  <Link
-                    href="/dashboard/candidates"
-                    className="text-xs font-medium text-slate-600 hover:text-slate-900"
-                  >
-                    View
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[12px] text-slate-500">{stage.percentage}%</span>
+                    <span className="text-[14px] font-semibold text-slate-900 w-10 text-right">{stage.count}</span>
+                  </div>
+                </div>
+                <div className="h-1.5 bg-slate-100 rounded-sm overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{ width: `${stage.percentage}%`, backgroundColor: stage.color }}
+                  />
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="px-5 py-8 text-center">
-              <Activity size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-sm text-slate-500">No recent activity</p>
-            </div>
-          )}
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-2 gap-1 mt-1">
+        {/* Recent Applications */}
+        <div className="bg-white border border-slate-200">
+          <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold text-slate-900">Recent Applications</h2>
+            <Link
+              href="/dashboard/candidates"
+              className="text-[12px] font-medium text-[#5371FE] hover:text-[#4461ED] flex items-center gap-1"
+            >
+              View All
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {recentApplications.length > 0 ? (
+              recentApplications.slice(0, 8).map((candidate) => (
+                <div key={candidate.id} className="px-6 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[13px] font-medium text-slate-900 truncate">{candidate.name}</p>
+                        <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded">
+                          {candidate.aiScore}%
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate">{candidate.jobTitle}</p>
+                    </div>
+                    <div className="text-[11px] text-slate-400 ml-3">
+                      {new Date(Number(candidate.appliedDateTimestamp)).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-6 py-12 text-center">
+                <Users size={28} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-[12px] text-slate-500">No applications</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Jobs */}
+        <div className="bg-white border border-slate-200">
+          <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold text-slate-900">Top Jobs</h2>
+            <Link
+              href="/dashboard/jobs"
+              className="text-[12px] font-medium text-[#5371FE] hover:text-[#4461ED] flex items-center gap-1"
+            >
+              View All
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {topJobs.length > 0 ? (
+              topJobs.slice(0, 8).map((job, index) => (
+                <div key={job.id} className="px-6 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <div className="w-6 h-6 bg-slate-100 text-slate-600 rounded flex items-center justify-center text-[11px] font-semibold shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-slate-900 truncate">{job.title}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] text-slate-500 truncate">{job.department}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-[11px] text-slate-500 truncate">{job.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[14px] font-semibold text-slate-900 ml-3">
+                      {job.applicantCount}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-6 py-12 text-center">
+                <Briefcase size={28} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-[12px] text-slate-500">No jobs posted</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-1 mt-1">
         <Link
-          href="/dashboard/jobs/new"
-          className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:shadow-sm transition-all group"
+          href="/dashboard/jobs"
+          className="bg-white border border-slate-200 px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg">
-              <Briefcase className="text-blue-600" size={18} />
+              <Briefcase size={18} className="text-blue-600" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900">Create New Job</h3>
-            <ArrowRight className="ml-auto text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" size={16} />
+            <div className="flex-1">
+              <div className="text-[12px] font-medium text-slate-900">Manage Jobs</div>
+              <div className="text-[11px] text-slate-500">{metrics.totalJobs} positions</div>
+            </div>
+            <ArrowRight size={14} className="text-slate-300" />
           </div>
-          <p className="text-xs text-slate-500">
-            Post a new position
-          </p>
         </Link>
 
         <Link
           href="/dashboard/candidates"
-          className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:shadow-sm transition-all group"
+          className="bg-white border border-slate-200 px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-50 rounded-lg">
-              <Users className="text-purple-600" size={18} />
+              <Users size={18} className="text-purple-600" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900">View Candidates</h3>
-            <ArrowRight className="ml-auto text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" size={16} />
+            <div className="flex-1">
+              <div className="text-[12px] font-medium text-slate-900">All Candidates</div>
+              <div className="text-[11px] text-slate-500">{metrics.totalCandidates} applications</div>
+            </div>
+            <ArrowRight size={14} className="text-slate-300" />
           </div>
-          <p className="text-xs text-slate-500">Browse {metrics.totalCandidates} applications</p>
         </Link>
 
         <Link
-          href="/dashboard/jobs"
-          className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:shadow-sm transition-all group"
+          href="/dashboard/settings"
+          className="bg-white border border-slate-200 px-5 py-4 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-50 rounded-lg">
-              <Target className="text-emerald-600" size={18} />
+              <Target size={18} className="text-emerald-600" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900">Manage Jobs</h3>
-            <ArrowRight className="ml-auto text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" size={16} />
+            <div className="flex-1">
+              <div className="text-[12px] font-medium text-slate-900">Settings</div>
+              <div className="text-[11px] text-slate-500">Customize ATS</div>
+            </div>
+            <ArrowRight size={14} className="text-slate-300" />
           </div>
-          <p className="text-xs text-slate-500">Track job postings</p>
         </Link>
       </div>
     </div>

@@ -1,21 +1,99 @@
 'use client';
 
-import { useState } from 'react';
-import { Building2, MapPin, Briefcase, Tag, Plus, X, Save, Check } from 'lucide-react';
-import { CURRENT_COMPANY } from '@/lib/auth';
-import { COMPANY_SETTINGS } from '@/lib/companySettings';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Building2, MapPin, Briefcase, Users } from 'lucide-react';
+
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  departments: string[];
+  locations: string[];
+  jobTypes: string[];
+}
 
 export default function SettingsPage() {
-  const [companyName, setCompanyName] = useState(CURRENT_COMPANY.name);
-  const [companyDescription, setCompanyDescription] = useState('Building the future of enterprise software');
-  const [departments, setDepartments] = useState(COMPANY_SETTINGS.departments);
-  const [locations, setLocations] = useState(COMPANY_SETTINGS.locations);
-  const [jobTypes, setJobTypes] = useState(COMPANY_SETTINGS.jobTypes);
+  const router = useRouter();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Form state
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [jobTypes, setJobTypes] = useState<string[]>([]);
+
+  // Temporary input states for adding new items
   const [newDepartment, setNewDepartment] = useState('');
   const [newLocation, setNewLocation] = useState('');
   const [newJobType, setNewJobType] = useState('');
-  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetchCompanyData();
+  }, []);
+
+  const fetchCompanyData = async () => {
+    try {
+      const response = await fetch('/api/dashboard/company');
+      if (!response.ok) throw new Error('Failed to fetch company data');
+
+      const data = await response.json();
+      setCompany(data.company);
+      setName(data.company.name);
+      setDescription(data.company.description || '');
+      setDepartments(data.company.departments || []);
+      setLocations(data.company.locations || []);
+      setJobTypes(data.company.jobTypes || []);
+    } catch (error) {
+      console.error('Error fetching company:', error);
+      setSaveError('Failed to load company settings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+    setSaveError(null);
+
+    try {
+      const response = await fetch('/api/dashboard/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          description,
+          departments,
+          locations,
+          jobTypes,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save settings');
+      }
+
+      const data = await response.json();
+      setCompany(data.company);
+      setSaveSuccess(true);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error: any) {
+      console.error('Error saving settings:', error);
+      setSaveError(error.message || 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const addDepartment = () => {
     if (newDepartment.trim() && !departments.includes(newDepartment.trim())) {
@@ -50,254 +128,201 @@ export default function SettingsPage() {
     setJobTypes(jobTypes.filter(t => t !== type));
   };
 
-  const handleSave = () => {
-    // In production, this would save to Supabase
-    console.log('Saving settings:', {
-      companyName,
-      companyDescription,
-      departments,
-      locations,
-      jobTypes,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-slate-600 text-[15px]">Loading settings...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Company Settings</h1>
-        <p className="text-slate-600">
-          Configure your company information and job posting options
-        </p>
-      </div>
-
-      {/* Company Information */}
-      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-            <Building2 size={20} strokeWidth={2.5} className="text-slate-700" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Company Information</h2>
-            <p className="text-sm text-slate-600">This appears on your public careers page</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-[40px] font-bold text-slate-900 mb-2">Company Settings</h1>
+          <p className="text-[15px] text-slate-600">Manage your company information and preferences</p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">
-              Company Name
-            </label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-slate-900 transition-all font-medium"
-              placeholder="Your Company Name"
-            />
+        {/* Error Alert */}
+        {saveError && (
+          <div className="mb-6 p-4 bg-red-50/80 backdrop-blur-xl border border-red-200/80 rounded-xl">
+            <p className="text-[13px] font-semibold text-red-800">{saveError}</p>
+          </div>
+        )}
+
+        {/* Success Alert */}
+        {saveSuccess && (
+          <div className="mb-6 p-4 bg-green-50/80 backdrop-blur-xl border border-green-200/80 rounded-xl">
+            <p className="text-[13px] font-semibold text-green-800">Settings saved successfully!</p>
+          </div>
+        )}
+
+        {/* Settings Form */}
+        <div className="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-8 space-y-8">
+            {/* Company Name */}
+            <div>
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 mb-3">
+                <Building2 size={16} className="text-[#5371FE]" />
+                Company Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5371FE]/20 focus:border-[#5371FE] transition-all"
+                placeholder="Enter company name"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-700 mb-3">
+                Company Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5371FE]/20 focus:border-[#5371FE] transition-all resize-none"
+                placeholder="Brief description of your company"
+              />
+            </div>
+
+            {/* Departments */}
+            <div>
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 mb-3">
+                <Users size={16} className="text-[#5371FE]" />
+                Departments
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newDepartment}
+                  onChange={(e) => setNewDepartment(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addDepartment()}
+                  className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5371FE]/20 focus:border-[#5371FE] transition-all"
+                  placeholder="Add department (e.g., Engineering)"
+                />
+                <button
+                  onClick={addDepartment}
+                  className="px-5 py-2.5 bg-[#5371FE] text-white text-[13px] font-semibold rounded-xl hover:bg-[#4461ED] active:bg-[#3551DC] transition-all"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {departments.map((dept) => (
+                  <div
+                    key={dept}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg"
+                  >
+                    <span className="text-[13px] text-slate-700">{dept}</span>
+                    <button
+                      onClick={() => removeDepartment(dept)}
+                      className="text-slate-400 hover:text-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Locations */}
+            <div>
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 mb-3">
+                <MapPin size={16} className="text-[#5371FE]" />
+                Locations
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addLocation()}
+                  className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5371FE]/20 focus:border-[#5371FE] transition-all"
+                  placeholder="Add location (e.g., San Francisco, CA)"
+                />
+                <button
+                  onClick={addLocation}
+                  className="px-5 py-2.5 bg-[#5371FE] text-white text-[13px] font-semibold rounded-xl hover:bg-[#4461ED] active:bg-[#3551DC] transition-all"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {locations.map((loc) => (
+                  <div
+                    key={loc}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg"
+                  >
+                    <span className="text-[13px] text-slate-700">{loc}</span>
+                    <button
+                      onClick={() => removeLocation(loc)}
+                      className="text-slate-400 hover:text-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Job Types */}
+            <div>
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 mb-3">
+                <Briefcase size={16} className="text-[#5371FE]" />
+                Job Types
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newJobType}
+                  onChange={(e) => setNewJobType(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addJobType()}
+                  className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5371FE]/20 focus:border-[#5371FE] transition-all"
+                  placeholder="Add job type (e.g., Full-time, Contract)"
+                />
+                <button
+                  onClick={addJobType}
+                  className="px-5 py-2.5 bg-[#5371FE] text-white text-[13px] font-semibold rounded-xl hover:bg-[#4461ED] active:bg-[#3551DC] transition-all"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {jobTypes.map((type) => (
+                  <div
+                    key={type}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg"
+                  >
+                    <span className="text-[13px] text-slate-700">{type}</span>
+                    <button
+                      onClick={() => removeJobType(type)}
+                      className="text-slate-400 hover:text-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">
-              Company Description
-            </label>
-            <textarea
-              value={companyDescription}
-              onChange={(e) => setCompanyDescription(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-slate-900 transition-all font-medium resize-none"
-              placeholder="Brief description of your company..."
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              This appears in the hero section of your careers page
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Departments */}
-      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center border-2 border-blue-200">
-            <Tag size={20} strokeWidth={2.5} className="text-blue-700" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Departments</h2>
-            <p className="text-sm text-slate-600">Job categories for filtering</p>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newDepartment}
-              onChange={(e) => setNewDepartment(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addDepartment()}
-              className="flex-1 px-4 py-2.5 border-2 border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-slate-900 transition-all"
-              placeholder="Add department (e.g., Engineering, Sales)"
-            />
+          {/* Footer with Save Button */}
+          <div className="px-8 py-6 bg-slate-50/80 border-t border-slate-200/80 flex justify-end">
             <button
-              onClick={addDepartment}
-              className="px-4 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold transition-colors flex items-center gap-2"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-8 py-3 bg-[#5371FE] text-white text-[15px] font-semibold rounded-xl hover:bg-[#4461ED] active:bg-[#3551DC] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus size={18} strokeWidth={2.5} />
-              Add
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          {departments.map((dept) => (
-            <div
-              key={dept}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 border-2 border-blue-200 rounded-lg font-semibold"
-            >
-              <span>{dept}</span>
-              <button
-                onClick={() => removeDepartment(dept)}
-                className="hover:bg-blue-200 rounded p-0.5 transition-colors"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            </div>
-          ))}
-          {departments.length === 0 && (
-            <p className="text-slate-500 text-sm py-2">No departments added yet</p>
-          )}
-        </div>
-      </div>
-
-      {/* Locations */}
-      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border-2 border-emerald-200">
-            <MapPin size={20} strokeWidth={2.5} className="text-emerald-700" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Locations</h2>
-            <p className="text-sm text-slate-600">Office locations and remote options</p>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addLocation()}
-              className="flex-1 px-4 py-2.5 border-2 border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-slate-900 transition-all"
-              placeholder="Add location (e.g., San Francisco, CA)"
-            />
-            <button
-              onClick={addLocation}
-              className="px-4 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold transition-colors flex items-center gap-2"
-            >
-              <Plus size={18} strokeWidth={2.5} />
-              Add
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {locations.map((loc) => (
-            <div
-              key={loc}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 rounded-lg font-semibold"
-            >
-              <span>{loc}</span>
-              <button
-                onClick={() => removeLocation(loc)}
-                className="hover:bg-emerald-200 rounded p-0.5 transition-colors"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            </div>
-          ))}
-          {locations.length === 0 && (
-            <p className="text-slate-500 text-sm py-2">No locations added yet</p>
-          )}
-        </div>
-      </div>
-
-      {/* Job Types */}
-      <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center border-2 border-purple-200">
-            <Briefcase size={20} strokeWidth={2.5} className="text-purple-700" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Job Types</h2>
-            <p className="text-sm text-slate-600">Employment types for your positions</p>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newJobType}
-              onChange={(e) => setNewJobType(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addJobType()}
-              className="flex-1 px-4 py-2.5 border-2 border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-slate-900 transition-all"
-              placeholder="Add job type (e.g., Full-time, Contract)"
-            />
-            <button
-              onClick={addJobType}
-              className="px-4 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold transition-colors flex items-center gap-2"
-            >
-              <Plus size={18} strokeWidth={2.5} />
-              Add
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {jobTypes.map((type) => (
-            <div
-              key={type}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 border-2 border-purple-200 rounded-lg font-semibold"
-            >
-              <span>{type}</span>
-              <button
-                onClick={() => removeJobType(type)}
-                className="hover:bg-purple-200 rounded p-0.5 transition-colors"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            </div>
-          ))}
-          {jobTypes.length === 0 && (
-            <p className="text-slate-500 text-sm py-2">No job types added yet</p>
-          )}
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="sticky bottom-6 flex items-center justify-end gap-3">
-        <button
-          onClick={handleSave}
-          className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${
-            saved
-              ? 'bg-emerald-600 text-white'
-              : 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg'
-          }`}
-        >
-          {saved ? (
-            <>
-              <Check size={20} strokeWidth={2.5} />
-              Saved!
-            </>
-          ) : (
-            <>
-              <Save size={20} strokeWidth={2.5} />
-              Save Changes
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

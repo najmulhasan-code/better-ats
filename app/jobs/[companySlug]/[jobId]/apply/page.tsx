@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Upload, FileText, Loader2, CheckCircle } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import { mockCompanies, mockJobs } from '@/lib/mockData';
-import { candidateStore, generateCandidateId } from '@/lib/candidateStore';
-import { jobStore } from '@/lib/jobStore';
 
 export default function ApplyPage() {
   const params = useParams();
@@ -26,14 +23,31 @@ export default function ApplyPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [job, setJob] = useState<any>(null);
+  const [company, setCompany] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const company = mockCompanies.find((c) => c.slug === companySlug);
+  // Fetch job and company data from API
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/jobs/${jobId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setJob(data.job);
+          setCompany(data.job.company);
+        }
+      } catch (error) {
+        console.error('Error fetching job:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // Check both localStorage and mock jobs
-  const storedJob = jobStore.getById(jobId);
-  const mockJob = mockJobs.find((j) => j.id === jobId && j.companySlug === companySlug);
-  const job = storedJob || mockJob;
+    fetchData();
+  }, [jobId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -80,43 +94,62 @@ export default function ApplyPage() {
 
     setIsSubmitting(true);
 
-    // Simulate processing time
-    setTimeout(() => {
-      // Create new candidate
-      const newCandidate = {
-        id: generateCandidateId(),
-        companySlug,
-        jobId,
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        linkedin: formData.linkedIn,
-        portfolio: formData.portfolio,
-        appliedDate: 'Just now',
-        appliedDateTimestamp: Date.now(),
-        aiScore: Math.floor(Math.random() * 15) + 75, // Random score between 75-90
-        stage: 'applied',
-        jobTitle: job?.title || '',
-        matchReasons: [
-          'Resume submitted successfully',
-          'Application under review',
-          'Will be evaluated by hiring team',
-        ],
-        skillMatch: [],
-        experience: 'See resume',
-        currentRole: 'See resume',
-        education: 'See resume',
-        resumeFile: resume.name,
-        coverLetter: formData.coverLetter,
-      };
+    try {
+      // Convert resume to base64 for transmission
+      const reader = new FileReader();
+      const resumeBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          // Remove data URL prefix to get just the base64 data
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(resume);
+      });
 
-      // Save to localStorage
-      candidateStore.add(newCandidate);
+      const response = await fetch(`/api/jobs/${jobId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          linkedin: formData.linkedIn,
+          portfolio: formData.portfolio,
+          coverLetter: formData.coverLetter,
+          resumeData: {
+            name: resume.name,
+            size: resume.size,
+            type: resume.type,
+            data: resumeBase64,
+          },
+        }),
+      });
 
+      if (response.ok) {
+        setIsSubmitted(true);
+      } else {
+        const error = await response.json();
+        alert(`Failed to submit application: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      alert('Failed to submit application. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 1500);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
 
   if (!company || !job) {
     return (

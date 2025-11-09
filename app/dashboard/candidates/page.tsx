@@ -1,18 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Star, Mail, Linkedin, FileText, Briefcase, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
-import { CURRENT_COMPANY } from '@/lib/auth';
-import { mockCandidates } from '@/lib/mockData';
+import { useCurrentCompany } from '@/lib/auth/hooks';
 
 export default function CandidatesPage() {
-  // In production: const candidates = await db.candidates.findByCompany(currentCompany.id)
-  const companyCandidates = mockCandidates.filter((c) => c.companySlug === CURRENT_COMPANY.slug);
-
+  const { company, loading } = useCurrentCompany();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score');
   const [filterJob, setFilterJob] = useState<string>('all');
   const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
+  const [companyCandidates, setCompanyCandidates] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch candidates from API
+  useEffect(() => {
+    async function fetchCandidates() {
+      if (!company?.slug) return;
+
+      setDataLoading(true);
+      try {
+        const response = await fetch('/api/dashboard/candidates');
+        if (response.ok) {
+          const data = await response.json();
+          setCompanyCandidates(data.candidates || []);
+        }
+      } catch (error) {
+        console.error('Error fetching candidates:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+
+    fetchCandidates();
+  }, [company?.slug]);
+
+  if (loading || dataLoading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Loading...</div></div>;
+  }
+
+  if (!company) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Please sign in to view candidates</div></div>;
+  }
 
   const uniqueJobs = Array.from(new Set(companyCandidates.map((c) => c.jobTitle)));
 
@@ -47,15 +76,15 @@ export default function CandidatesPage() {
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900">Candidates</h1>
-        <p className="text-slate-600 mt-1">
+    <div className="space-y-7">
+      <div className="mb-8">
+        <h1 className="text-[40px] font-bold text-slate-900 tracking-tight">Candidates</h1>
+        <p className="text-[15px] text-slate-600 mt-3 font-medium">
           {filteredAndSortedCandidates.length} total applications across all jobs
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200/60 p-6 shadow-xl mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search
@@ -67,7 +96,7 @@ export default function CandidatesPage() {
               placeholder="Search candidates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400"
+              className="w-full pl-10 pr-4 py-3 border border-slate-300/80 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5371FE] focus:border-transparent transition-all"
             />
           </div>
 
@@ -79,7 +108,7 @@ export default function CandidatesPage() {
             <select
               value={filterJob}
               onChange={(e) => setFilterJob(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 appearance-none bg-white"
+              className="w-full pl-10 pr-4 py-3 border border-slate-300/80 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5371FE] focus:border-transparent appearance-none bg-white transition-all"
             >
               <option value="all">All Jobs</option>
               {uniqueJobs.map((job) => (
@@ -94,7 +123,7 @@ export default function CandidatesPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'score' | 'date')}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 appearance-none bg-white"
+              className="w-full px-4 py-3 border border-slate-300/80 rounded-xl text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5371FE] focus:border-transparent appearance-none bg-white transition-all"
             >
               <option value="score">Sort by: AI Score</option>
               <option value="date">Sort by: Application Date</option>
@@ -107,7 +136,7 @@ export default function CandidatesPage() {
         {filteredAndSortedCandidates.map((candidate) => (
           <div
             key={candidate.id}
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all"
+            className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 overflow-hidden hover:shadow-2xl hover:scale-[1.01] transition-all duration-300"
           >
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -221,12 +250,17 @@ export default function CandidatesPage() {
       </div>
 
       {filteredAndSortedCandidates.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-          <Search size={48} className="mx-auto text-slate-400 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No candidates found</h3>
-          <p className="text-slate-600">
-            Try adjusting your search or filter criteria
-          </p>
+        <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-16 text-center shadow-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full blur-3xl"></div>
+          <div className="relative">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Search size={40} className="text-slate-400" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-[24px] font-bold text-slate-900 mb-3 tracking-tight">No candidates found</h3>
+            <p className="text-[15px] text-slate-600 font-medium">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
         </div>
       )}
     </div>

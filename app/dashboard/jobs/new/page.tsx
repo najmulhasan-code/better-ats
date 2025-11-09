@@ -16,13 +16,12 @@ import {
   Building2,
   GripVertical,
   Upload,
-  ChevronRight,
   Info,
   Check,
 } from 'lucide-react';
 import Link from 'next/link';
 import { COMPANY_SETTINGS } from '@/lib/companySettings';
-import { CURRENT_COMPANY } from '@/lib/auth';
+import { useCurrentCompany } from '@/lib/auth/hooks';
 import { jobStore, generateJobId } from '@/lib/jobStore';
 
 type CustomQuestion = {
@@ -53,8 +52,8 @@ type KnockoutQuestion = {
 
 export default function CreateJobPage() {
   const router = useRouter();
+  const { company, loading } = useCurrentCompany();
   const [showPreview, setShowPreview] = useState(true);
-  const [activeSection, setActiveSection] = useState('basics');
 
   // Job basic info
   const [jobData, setJobData] = useState({
@@ -218,11 +217,6 @@ export default function CreateJobPage() {
   // Custom application questions
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
 
-  const sections = [
-    { id: 'basics', label: 'Job Details', icon: Briefcase },
-    { id: 'application', label: 'Application Form', icon: Building2 },
-  ];
-
   const handleInputChange = (field: string, value: string) => {
     setJobData({ ...jobData, [field]: value });
   };
@@ -318,37 +312,69 @@ export default function CreateJobPage() {
     );
   };
 
-  const handleSaveJob = async (status: 'draft' | 'active') => {
+  const handleSaveJob = async (status: 'draft' | 'published') => {
     // Validate required fields
     if (!jobData.title || !jobData.department || !jobData.location) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const newJob = {
-      id: generateJobId(),
-      companySlug: CURRENT_COMPANY.slug,
-      title: jobData.title,
-      department: jobData.department,
-      location: jobData.location,
-      type: jobData.type,
-      salary: jobData.salary,
-      description: jobData.description,
-      responsibilities: responsibilities.filter((r) => r.trim()),
-      requirements: requirements.filter((r) => r.trim()),
-      niceToHave: niceToHave.filter((n) => n.trim()),
-      applicants: 0,
-      posted: 'Just now',
-      postedTimestamp: Date.now(),
-      status,
-    };
+    if (!company) {
+      alert('Company information not found');
+      return;
+    }
 
-    // Save to localStorage
-    jobStore.add(newJob);
+    try {
+      const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: jobData.title,
+          department: jobData.department,
+          location: jobData.location,
+          type: jobData.type,
+          salary: jobData.salary || null,
+          description: jobData.description || null,
+          fullDescription: jobData.description || null,
+          responsibilities: responsibilities.filter((r) => r.trim()),
+          requirements: requirements.filter((r) => r.trim()),
+          niceToHave: niceToHave.filter((n) => n.trim()),
+          status,
+          // Application form configuration
+          applicationForm: {
+            standardFields: standardFields,
+            knockoutQuestions: knockoutQuestions.filter((q) => q.enabled),
+            eeoFields: eeoFields,
+            customQuestions: customQuestions,
+          },
+        }),
+      });
 
-    // Redirect to jobs page
-    router.push('/dashboard/jobs');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create job');
+      }
+
+      const data = await response.json();
+      console.log('Job created:', data.job);
+
+      // Redirect to jobs page
+      router.push('/dashboard/jobs');
+    } catch (error: any) {
+      console.error('Error creating job:', error);
+      alert(error.message || 'Failed to create job');
+    }
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Loading...</div></div>;
+  }
+
+  if (!company) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Please sign in to create jobs</div></div>;
+  }
 
   return (
     <div className="-m-8">
@@ -366,7 +392,7 @@ export default function CreateJobPage() {
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create Job Posting</h1>
                 <p className="text-sm text-slate-600 mt-0.5">
-                  Design your job posting and configure the application form
+                  Design your job posting and application form in one place
                 </p>
               </div>
             </div>
@@ -386,34 +412,13 @@ export default function CreateJobPage() {
                 Save as Draft
               </button>
               <button
-                onClick={() => handleSaveJob('active')}
+                onClick={() => handleSaveJob('published')}
                 className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all flex items-center gap-2 font-medium text-sm"
               >
                 <Check size={16} />
                 Publish
               </button>
             </div>
-          </div>
-
-          {/* Section Navigation */}
-          <div className="flex gap-2 mt-6 border-b border-slate-200 -mb-px">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex items-center gap-2 px-5 py-3 border-b-2 transition-all font-medium ${
-                    activeSection === section.id
-                      ? 'border-slate-900 text-slate-900'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <Icon size={18} />
-                  {section.label}
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
@@ -423,9 +428,7 @@ export default function CreateJobPage() {
         <div className={`grid ${showPreview ? 'grid-cols-2' : 'grid-cols-1'} gap-8 max-w-[1600px] mx-auto`}>
           {/* Form Section */}
           <div className="space-y-6">
-            {activeSection === 'basics' && (
-              <>
-                {/* Basic Information */}
+            {/* Basic Information */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-slate-100 rounded-lg">
@@ -678,30 +681,7 @@ export default function CreateJobPage() {
                   </div>
                 </div>
 
-                {/* Next Section CTA */}
-                <div className="bg-gradient-to-r from-slate-900 to-slate-700 rounded-2xl p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">Configure Application Form</h3>
-                      <p className="text-slate-300 text-sm">
-                        Customize which fields candidates will fill out
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setActiveSection('application')}
-                      className="px-6 py-3 bg-white text-slate-900 rounded-xl hover:bg-slate-100 transition-all flex items-center gap-2 font-semibold"
-                    >
-                      Continue
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {activeSection === 'application' && (
-              <>
-                {/* Standard Application Fields */}
+            {/* Standard Application Fields */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-shadow">
                   <div className="mb-6">
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -938,8 +918,6 @@ export default function CreateJobPage() {
                     </button>
                   </div>
                 </div>
-              </>
-            )}
           </div>
 
           {/* Preview Section */}
@@ -989,8 +967,71 @@ export default function CreateJobPage() {
                         </div>
                       </div>
 
+                      {/* Job Description */}
+                      {jobData.description && (
+                        <section>
+                          <h3 className="text-[18px] font-semibold text-slate-900 mb-3 tracking-tight">
+                            About the Role
+                          </h3>
+                          <p className="text-[15px] text-slate-700 leading-relaxed">
+                            {jobData.description}
+                          </p>
+                        </section>
+                      )}
+
+                      {/* Responsibilities */}
+                      {responsibilities.filter(r => r.trim()).length > 0 && (
+                        <section>
+                          <h3 className="text-[18px] font-semibold text-slate-900 mb-3 tracking-tight">
+                            Responsibilities
+                          </h3>
+                          <ul className="space-y-2">
+                            {responsibilities.filter(r => r.trim()).map((item: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-3 text-[15px] text-slate-700 leading-relaxed">
+                                <span className="text-slate-400 mt-1 text-[18px] leading-none">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+
+                      {/* Requirements */}
+                      {requirements.filter(r => r.trim()).length > 0 && (
+                        <section>
+                          <h3 className="text-[18px] font-semibold text-slate-900 mb-3 tracking-tight">
+                            Requirements
+                          </h3>
+                          <ul className="space-y-2">
+                            {requirements.filter(r => r.trim()).map((item: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-3 text-[15px] text-slate-700 leading-relaxed">
+                                <span className="text-slate-400 mt-1 text-[18px] leading-none">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+
+                      {/* Nice to Have */}
+                      {niceToHave.filter(n => n.trim()).length > 0 && (
+                        <section>
+                          <h3 className="text-[18px] font-semibold text-slate-900 mb-3 tracking-tight">
+                            Nice to Have
+                          </h3>
+                          <ul className="space-y-2">
+                            {niceToHave.filter(n => n.trim()).map((item: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-3 text-[15px] text-slate-700 leading-relaxed">
+                                <span className="text-slate-400 mt-1 text-[18px] leading-none">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+
                       <div>
-                        <h2 className="text-xl font-bold text-slate-900 mb-4">Apply for this position</h2>
+                        <h2 className="text-xl font-bold text-slate-900 mb-4 mt-8">Apply for this position</h2>
 
                         <div className="space-y-4 mb-6">
                           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">

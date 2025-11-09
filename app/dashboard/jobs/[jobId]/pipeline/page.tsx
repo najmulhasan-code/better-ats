@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import {
@@ -19,24 +19,65 @@ import {
   GripVertical,
 } from 'lucide-react';
 import Link from 'next/link';
-import { mockJobs, mockCandidates as initialCandidates, PIPELINE_STAGES } from '@/lib/mockData';
-import { CURRENT_COMPANY } from '@/lib/auth';
+import { useCurrentCompany } from '@/lib/auth/hooks';
+
+// Pipeline stages constant
+const PIPELINE_STAGES = [
+  { id: 'applied', name: 'New Applicants', color: 'slate' },
+  { id: 'screening', name: 'Screening', color: 'blue' },
+  { id: 'interview', name: 'Interview', color: 'purple' },
+  { id: 'offer', name: 'Offer', color: 'green' },
+  { id: 'hired', name: 'Hired', color: 'emerald' },
+  { id: 'rejected', name: 'Rejected', color: 'red' },
+];
 
 export default function JobPipelinePage() {
   const params = useParams();
   const router = useRouter();
+  const { company, loading } = useCurrentCompany();
   const jobId = params.jobId as string;
   const [searchQuery, setSearchQuery] = useState('');
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [job, setJob] = useState<any>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Local state for candidates (with drag-drop updates)
-  const [candidates, setCandidates] = useState(
-    initialCandidates.filter(
-      (c) => c.jobId === jobId && c.companySlug === CURRENT_COMPANY.slug
-    )
-  );
+  // Fetch job and candidates from API
+  useEffect(() => {
+    async function fetchData() {
+      if (!company?.slug) return;
 
-  const companyJobs = mockJobs.filter((job) => job.companySlug === CURRENT_COMPANY.slug);
-  const job = companyJobs.find((j) => j.id === jobId);
+      setDataLoading(true);
+      try {
+        // Fetch job details
+        const jobResponse = await fetch(`/api/jobs/${jobId}`);
+        if (jobResponse.ok) {
+          const jobData = await jobResponse.json();
+          setJob(jobData.job);
+        }
+
+        // Fetch candidates for this job
+        const candidatesResponse = await fetch(`/api/dashboard/jobs/${jobId}/candidates`);
+        if (candidatesResponse.ok) {
+          const candidatesData = await candidatesResponse.json();
+          setCandidates(candidatesData.candidates || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [jobId, company?.slug]);
+
+  if (loading || dataLoading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Loading...</div></div>;
+  }
+
+  if (!company) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Please sign in to view pipeline</div></div>;
+  }
 
   // Filter candidates by search query
   const filteredCandidates = searchQuery

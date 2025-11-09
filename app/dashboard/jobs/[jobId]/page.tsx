@@ -3,244 +3,56 @@
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, DollarSign, Briefcase, Calendar, Users, ChevronDown, ChevronUp, FileText, Mail, Star, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
-
-const mockJobs: Record<string, any> = {
-  'job-1': {
-    id: 'job-1',
-    title: 'Senior Software Engineer',
-    department: 'Engineering',
-    location: 'San Francisco, CA',
-    type: 'Full-time',
-    salary: '$150k - $200k',
-    applicants: 24,
-    posted: '3 days ago',
-    status: 'Active',
-    description: 'We are looking for an experienced software engineer to join our core platform team. You will be responsible for building scalable systems that power our product.',
-    requirements: [
-      '5+ years of experience in software development',
-      'Strong proficiency in React, Node.js, and TypeScript',
-      'Experience with distributed systems and microservices',
-      'Excellent problem-solving and communication skills',
-    ],
-    responsibilities: [
-      'Design and implement scalable backend services',
-      'Collaborate with product and design teams',
-      'Mentor junior engineers and conduct code reviews',
-      'Optimize application performance and reliability',
-    ],
-  },
-  'job-2': {
-    id: 'job-2',
-    title: 'Product Manager',
-    department: 'Product',
-    location: 'Remote',
-    type: 'Full-time',
-    salary: '$130k - $180k',
-    applicants: 18,
-    posted: '1 week ago',
-    status: 'Active',
-    description: 'Seeking a strategic product manager to lead our analytics products and drive product vision.',
-    requirements: [
-      '3+ years of product management experience',
-      'Strong analytical and data-driven mindset',
-      'Experience with B2B SaaS products',
-      'Excellent stakeholder management skills',
-    ],
-    responsibilities: [
-      'Define product strategy and roadmap',
-      'Work closely with engineering and design teams',
-      'Conduct user research and gather feedback',
-      'Track and analyze product metrics',
-    ],
-  },
-  'job-3': {
-    id: 'job-3',
-    title: 'Senior Product Designer',
-    department: 'Design',
-    location: 'New York, NY',
-    type: 'Full-time',
-    salary: '$120k - $160k',
-    applicants: 31,
-    posted: '2 weeks ago',
-    status: 'Active',
-    description: 'Join our design team to create beautiful and intuitive user experiences for our platform.',
-    requirements: [
-      '4+ years of product design experience',
-      'Strong portfolio demonstrating UX/UI skills',
-      'Proficiency in Figma and design systems',
-      'Experience with user research and testing',
-    ],
-    responsibilities: [
-      'Design end-to-end user experiences',
-      'Create and maintain design systems',
-      'Collaborate with product and engineering teams',
-      'Conduct usability testing and iterate on designs',
-    ],
-  },
-};
-
-const mockCandidates: Record<string, any[]> = {
-  'job-1': [
-    {
-      id: 'candidate-1',
-      name: 'Sarah Chen',
-      email: 'sarah.chen@email.com',
-      linkedin: 'linkedin.com/in/sarahchen',
-      appliedDate: '2 days ago',
-      aiScore: 94,
-      matchReasons: [
-        'Strong match: 7 years of experience with React and TypeScript',
-        'Previously built distributed systems at scale (10M+ users)',
-        'Led engineering team of 8 developers',
-        'Open source contributions to popular Node.js libraries',
-      ],
-      skillMatch: ['React', 'Node.js', 'TypeScript', 'Microservices', 'AWS'],
-      experience: '7 years',
-      currentRole: 'Senior Engineer at Tech Corp',
-      education: 'BS Computer Science, Stanford University',
-    },
-    {
-      id: 'candidate-2',
-      name: 'Michael Rodriguez',
-      email: 'michael.r@email.com',
-      linkedin: 'linkedin.com/in/mrodriguez',
-      appliedDate: '3 days ago',
-      aiScore: 89,
-      matchReasons: [
-        'Strong technical background: 6 years full-stack development',
-        'Experience with React, Node.js, and TypeScript',
-        'Built microservices architecture at previous company',
-        'Strong system design skills demonstrated in projects',
-      ],
-      skillMatch: ['React', 'Node.js', 'TypeScript', 'Docker', 'PostgreSQL'],
-      experience: '6 years',
-      currentRole: 'Software Engineer at StartupXYZ',
-      education: 'MS Computer Science, MIT',
-    },
-    {
-      id: 'candidate-3',
-      name: 'Emily Watson',
-      email: 'e.watson@email.com',
-      linkedin: 'linkedin.com/in/emilywatson',
-      appliedDate: '5 days ago',
-      aiScore: 86,
-      matchReasons: [
-        'Relevant experience: 5 years in backend development',
-        'Strong Node.js and TypeScript skills',
-        'Experience with cloud infrastructure (AWS, GCP)',
-        'Good communication skills based on writing samples',
-      ],
-      skillMatch: ['Node.js', 'TypeScript', 'AWS', 'MongoDB', 'Redis'],
-      experience: '5 years',
-      currentRole: 'Backend Engineer at CloudTech',
-      education: 'BS Software Engineering, UC Berkeley',
-    },
-    {
-      id: 'candidate-4',
-      name: 'David Kim',
-      email: 'david.kim@email.com',
-      linkedin: 'linkedin.com/in/davidkim',
-      appliedDate: '1 week ago',
-      aiScore: 82,
-      matchReasons: [
-        'Solid technical skills: 5 years of experience',
-        'Experience with React and modern JavaScript',
-        'Built scalable APIs serving millions of requests',
-        'Active contributor to tech community',
-      ],
-      skillMatch: ['React', 'JavaScript', 'Python', 'Docker', 'Kubernetes'],
-      experience: '5 years',
-      currentRole: 'Full Stack Developer at DataCo',
-      education: 'BS Computer Engineering, Georgia Tech',
-    },
-  ],
-  'job-2': [
-    {
-      id: 'candidate-5',
-      name: 'Jessica Park',
-      email: 'jessica.park@email.com',
-      linkedin: 'linkedin.com/in/jessicapark',
-      appliedDate: '1 day ago',
-      aiScore: 91,
-      matchReasons: [
-        'Strong PM background: 5 years in B2B SaaS',
-        'Led analytics product line generating $20M ARR',
-        'Data-driven approach with strong SQL and analytics skills',
-        'Excellent stakeholder management experience',
-      ],
-      skillMatch: ['Product Strategy', 'B2B SaaS', 'Analytics', 'SQL', 'A/B Testing'],
-      experience: '5 years',
-      currentRole: 'Senior Product Manager at Analytics Inc',
-      education: 'MBA, Harvard Business School',
-    },
-    {
-      id: 'candidate-6',
-      name: 'Alex Thompson',
-      email: 'alex.t@email.com',
-      linkedin: 'linkedin.com/in/alexthompson',
-      appliedDate: '4 days ago',
-      aiScore: 85,
-      matchReasons: [
-        'Relevant experience: 4 years in product management',
-        'Built data products from 0 to 1',
-        'Strong analytical background with engineering degree',
-        'User research and customer interview experience',
-      ],
-      skillMatch: ['Product Management', 'Data Products', 'User Research', 'Roadmapping'],
-      experience: '4 years',
-      currentRole: 'Product Manager at SaaS Startup',
-      education: 'BS Computer Science, Carnegie Mellon',
-    },
-  ],
-  'job-3': [
-    {
-      id: 'candidate-7',
-      name: 'Olivia Martinez',
-      email: 'olivia.m@email.com',
-      linkedin: 'linkedin.com/in/oliviamartinez',
-      appliedDate: '2 days ago',
-      aiScore: 93,
-      matchReasons: [
-        'Exceptional portfolio: 6 years of product design',
-        'Led design systems for enterprise SaaS products',
-        'Strong UX research skills with proven impact',
-        'Experience mentoring junior designers',
-      ],
-      skillMatch: ['Figma', 'Design Systems', 'UX Research', 'Prototyping', 'User Testing'],
-      experience: '6 years',
-      currentRole: 'Lead Product Designer at DesignCo',
-      education: 'BFA Interaction Design, RISD',
-    },
-    {
-      id: 'candidate-8',
-      name: 'Chris Anderson',
-      email: 'chris.a@email.com',
-      linkedin: 'linkedin.com/in/chrisanderson',
-      appliedDate: '5 days ago',
-      aiScore: 88,
-      matchReasons: [
-        'Strong design skills: 5 years of experience',
-        'Built and maintained design systems at scale',
-        'Proficient in Figma with component library expertise',
-        'Cross-functional collaboration experience',
-      ],
-      skillMatch: ['Figma', 'UI/UX Design', 'Design Systems', 'Wireframing'],
-      experience: '5 years',
-      currentRole: 'Senior Product Designer at CreativeApp',
-      education: 'BS Graphic Design, Parsons',
-    },
-  ],
-};
+import { useState, useEffect } from 'react';
+import { useCurrentCompany } from '@/lib/auth/hooks';
 
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { company, loading: authLoading } = useCurrentCompany();
   const jobId = params.jobId as string;
   const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
+  const [job, setJob] = useState<any>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const job = mockJobs[jobId];
-  const candidates = mockCandidates[jobId] || [];
+  // Fetch job and candidates from API
+  useEffect(() => {
+    async function fetchData() {
+      if (!company?.slug) return;
+
+      setLoading(true);
+      try {
+        // Fetch job details
+        const jobResponse = await fetch(`/api/jobs/${jobId}`);
+        if (jobResponse.ok) {
+          const jobData = await jobResponse.json();
+          setJob(jobData.job);
+        }
+
+        // Fetch candidates for this job
+        const candidatesResponse = await fetch(`/api/dashboard/jobs/${jobId}/candidates`);
+        if (candidatesResponse.ok) {
+          const candidatesData = await candidatesResponse.json();
+          setCandidates(candidatesData.candidates || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [jobId, company?.slug]);
+
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
 
   if (!job) {
     return (

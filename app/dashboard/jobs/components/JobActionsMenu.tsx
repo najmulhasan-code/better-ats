@@ -92,7 +92,7 @@ export default function JobActionsMenu({
         {isOpen && (
           <div className="absolute right-0 top-full mt-2 w-56 bg-white border-2 border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
             {/* Close Job */}
-            {currentStatus === 'active' && (
+            {currentStatus === 'published' && (
               <button
                 onClick={() =>
                   handleAction({
@@ -120,9 +120,9 @@ export default function JobActionsMenu({
                   handleAction({
                     type: 'reopen',
                     title: 'Reopen Job Posting',
-                    message: 'This will make the job active and start accepting applications again.',
+                    message: 'This will publish the job and start accepting applications again.',
                     actionLabel: 'Reopen Job',
-                    newStatus: 'active',
+                    newStatus: 'published',
                   })
                 }
                 className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors border-b border-slate-100"

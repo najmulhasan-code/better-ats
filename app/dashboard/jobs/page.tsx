@@ -3,98 +3,163 @@
 import Link from 'next/link';
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, ExternalLink, Briefcase } from 'lucide-react';
-import { CURRENT_COMPANY } from '@/lib/auth';
-import { mockJobs } from '@/lib/mockData';
 import JobCard from './components/JobCard';
-import { jobStore } from '@/lib/jobStore';
+
+interface Job {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  status: string;
+  applicants?: number;
+}
 
 export default function JobsPage() {
-  const [filter, setFilter] = useState<'all' | 'active' | 'draft' | 'closed'>('all');
-  const [newJobs, setNewJobs] = useState<any[]>([]);
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'closed'>('all');
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [companySlug, setCompanySlug] = useState<string>('');
 
-  // Load jobs from localStorage on mount
+  // Fetch jobs and user from database
   useEffect(() => {
-    const stored = jobStore.getByCompany(CURRENT_COMPANY.slug);
-    setNewJobs(stored);
+    const fetchData = async () => {
+      try {
+        console.log('Fetching jobs and user...');
+
+        // Fetch user info for company slug
+        const userRes = await fetch('/api/auth/user');
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setCompanySlug(userData.user?.company?.slug || '');
+        }
+
+        // Fetch jobs
+        const jobsRes = await fetch('/api/dashboard/jobs');
+        console.log('Jobs response status:', jobsRes.status);
+
+        if (jobsRes.ok) {
+          const data = await jobsRes.json();
+          console.log('Jobs data:', data);
+          setJobs(data.jobs || []);
+        } else {
+          const error = await jobsRes.json();
+          console.error('Jobs API error:', error);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const handleStatusChange = (jobId: string, newStatus: string) => {
-    jobStore.updateStatus(jobId, newStatus as 'active' | 'draft' | 'closed');
-    // Reload jobs
-    const stored = jobStore.getByCompany(CURRENT_COMPANY.slug);
-    setNewJobs(stored);
+  const handleStatusChange = async (jobId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setJobs(jobs.map(job =>
+          job.id === jobId ? { ...job, status: newStatus } : job
+        ));
+      } else {
+        alert('Failed to update job status');
+      }
+    } catch (error) {
+      console.error('Error updating job status:', error);
+      alert('Failed to update job status');
+    }
   };
 
-  // Merge mock jobs with new jobs from localStorage
-  const mockCompanyJobs = mockJobs.filter((job) => job.companySlug === CURRENT_COMPANY.slug);
-  const allJobs = [...newJobs, ...mockCompanyJobs];
-
-  const filteredJobs = filter === 'all'
-    ? allJobs
-    : allJobs.filter(job => job.status?.toLowerCase() === filter);
+  const filteredJobs = useMemo(() => {
+    if (filter === 'all') return jobs;
+    return jobs.filter(job => job.status?.toLowerCase() === filter);
+  }, [jobs, filter]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Jobs</h1>
+        <div>
+          <h1 className="text-[32px] font-semibold text-slate-900 mb-2 tracking-tight">Jobs</h1>
+          <p className="text-[15px] text-slate-600">Manage your job postings</p>
+        </div>
         <div className="flex items-center gap-3">
-          <Link
-            href={`/jobs/${CURRENT_COMPANY.slug}`}
-            target="_blank"
-            className="px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium flex items-center gap-2"
-          >
-            <ExternalLink size={16} />
-            Careers Page
-          </Link>
+          {companySlug && (
+            <Link
+              href={`/jobs/${companySlug}`}
+              target="_blank"
+              className="px-4 py-2.5 border border-slate-200/80 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300/80 transition-all text-[14px] font-medium flex items-center gap-2"
+            >
+              <ExternalLink size={16} strokeWidth={2} />
+              Careers Page
+            </Link>
+          )}
           <Link
             href="/dashboard/jobs/new"
-            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium flex items-center gap-2"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#5371FE] to-[#7C3AED] text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 text-[14px] font-bold flex items-center gap-2 shadow-lg shadow-[#5371FE]/30"
           >
-            <Plus size={16} />
+            <Plus size={16} strokeWidth={2.5} />
             Create Job
           </Link>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-sm text-slate-600 mb-1">Active</div>
-          <div className="text-2xl font-bold text-slate-900">
-            {allJobs.filter(j => j.status?.toLowerCase() === 'active').length}
+      <div className="grid grid-cols-4 gap-5">
+        <div className="relative bg-gradient-to-br from-white to-emerald-50/50 border border-emerald-100/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-xl"></div>
+          <div className="relative">
+            <div className="text-[12px] text-emerald-700 mb-2 font-bold uppercase tracking-wide">Published</div>
+            <div className="text-[36px] font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent tracking-tight">
+              {jobs.filter(j => j.status?.toLowerCase() === 'published').length}
+            </div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-sm text-slate-600 mb-1">Applications</div>
-          <div className="text-2xl font-bold text-slate-900">
-            {allJobs.reduce((acc, job) => acc + (job.applicants || 0), 0)}
+        <div className="relative bg-gradient-to-br from-white to-blue-50/50 border border-blue-100/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+          <div className="relative">
+            <div className="text-[12px] text-blue-700 mb-2 font-bold uppercase tracking-wide">Applications</div>
+            <div className="text-[36px] font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent tracking-tight">
+              {jobs.reduce((acc, job) => acc + (job.applicants || 0), 0)}
+            </div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-sm text-slate-600 mb-1">Draft</div>
-          <div className="text-2xl font-bold text-slate-900">
-            {allJobs.filter(j => j.status?.toLowerCase() === 'draft').length}
+        <div className="relative bg-gradient-to-br from-white to-amber-50/50 border border-amber-100/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/10 to-transparent rounded-full blur-xl"></div>
+          <div className="relative">
+            <div className="text-[12px] text-amber-700 mb-2 font-bold uppercase tracking-wide">Draft</div>
+            <div className="text-[36px] font-bold bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent tracking-tight">
+              {jobs.filter(j => j.status?.toLowerCase() === 'draft').length}
+            </div>
           </div>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-sm text-slate-600 mb-1">Closed</div>
-          <div className="text-2xl font-bold text-slate-900">
-            {allJobs.filter(j => j.status?.toLowerCase() === 'closed').length}
+        <div className="relative bg-gradient-to-br from-white to-slate-100/50 border border-slate-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-slate-500/10 to-transparent rounded-full blur-xl"></div>
+          <div className="relative">
+            <div className="text-[12px] text-slate-700 mb-2 font-bold uppercase tracking-wide">Closed</div>
+            <div className="text-[36px] font-bold bg-gradient-to-r from-slate-600 to-slate-800 bg-clip-text text-transparent tracking-tight">
+              {jobs.filter(j => j.status?.toLowerCase() === 'closed').length}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2">
-        {(['all', 'active', 'draft', 'closed'] as const).map((status) => (
+        {(['all', 'published', 'draft', 'closed'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-all duration-300 ${
               filter === status
-                ? 'bg-slate-900 text-white'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                ? 'bg-gradient-to-r from-[#5371FE] to-[#7C3AED] text-white shadow-lg shadow-[#5371FE]/30 scale-105'
+                : 'bg-white/80 backdrop-blur-sm border border-slate-200/80 text-slate-700 hover:bg-white hover:border-[#5371FE]/30 hover:shadow-md'
             }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -104,24 +169,41 @@ export default function JobsPage() {
 
       {/* Jobs List */}
       {filteredJobs.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-lg p-12 text-center">
-          <Briefcase className="mx-auto text-slate-400 mb-4" size={48} />
-          <h2 className="text-lg font-semibold text-slate-900 mb-2">No jobs found</h2>
-          <Link
-            href="/dashboard/jobs/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium mt-4"
-          >
-            <Plus size={16} />
-            Create Job
-          </Link>
+        <div className="relative bg-gradient-to-br from-white via-blue-50/20 to-purple-50/20 border border-slate-200/60 rounded-3xl p-20 text-center shadow-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-br from-purple-500/5 to-transparent rounded-full blur-3xl"></div>
+          <div className="relative">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Briefcase className="text-slate-400" size={40} strokeWidth={1.5} />
+            </div>
+            <h2 className="text-[28px] font-semibold text-slate-900 mb-3 tracking-tight">
+              {filter === 'all' ? 'No jobs posted yet' : `No ${filter} jobs`}
+            </h2>
+            <p className="text-[16px] text-slate-600 leading-relaxed mb-8">
+              {filter === 'all'
+                ? 'Start building your team by creating your first job posting. Attract top talent and manage applications all in one place.'
+                : `You don't have any jobs with "${filter}" status. Try a different filter or create a new job.`}
+            </p>
+            {filter === 'all' && (
+              <Link
+                href="/dashboard/jobs/new"
+                className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-[#5371FE] to-[#7C3AED] text-white rounded-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 text-[15px] font-bold shadow-lg shadow-[#5371FE]/30"
+              >
+                <Plus size={18} strokeWidth={2.5} />
+                Create Your First Job
+              </Link>
+            )}
+          </div>
+          </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="max-w-4xl mx-auto space-y-3">
           {filteredJobs.map((job) => (
             <JobCard
               key={job.id}
               job={job}
-              companySlug={CURRENT_COMPANY.slug}
+              companySlug={companySlug}
               onStatusChange={handleStatusChange}
             />
           ))}

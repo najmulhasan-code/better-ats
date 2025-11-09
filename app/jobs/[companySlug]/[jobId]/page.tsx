@@ -1,10 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MapPin, Briefcase, DollarSign, Calendar, ArrowLeft } from 'lucide-react';
-import { mockCompanies, mockJobs } from '@/lib/mockData';
-import { jobStore } from '@/lib/jobStore';
-import { useEffect, useState } from 'react';
+import { MapPin, Briefcase, DollarSign, Calendar, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import JobApplicationView from '@/app/components/job/JobApplicationView';
 
 interface JobDetailPageProps {
   params: Promise<{
@@ -16,159 +15,210 @@ interface JobDetailPageProps {
 export default function JobDetailPage({ params }: JobDetailPageProps) {
   const [companySlug, setCompanySlug] = useState<string>('');
   const [jobId, setJobId] = useState<string>('');
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
-    params.then((p) => {
+    params.then(async (p) => {
       setCompanySlug(p.companySlug);
       setJobId(p.jobId);
+
+      try {
+        const res = await fetch(`/api/jobs/${p.jobId}`);
+        if (!res.ok) {
+          setError('Job not found');
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setJob(data.job);
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching job:', err);
+        setError(err.message);
+        setLoading(false);
+      }
     });
   }, [params]);
 
-  const company = mockCompanies.find((c) => c.slug === companySlug);
+  const handleApplicationSubmit = async (data: any) => {
+    const { formData, resume, customAnswers, knockoutAnswers } = data;
 
-  // Check both localStorage and mock jobs
-  const storedJob = jobStore.getById(jobId);
-  const mockJob = mockJobs.find((j) => j.id === jobId && j.companySlug === companySlug);
-  const job = storedJob || mockJob;
+    if (!resume) {
+      alert('Please upload your resume');
+      return;
+    }
 
-  if (!company) {
+    setIsSubmitting(true);
+
+    try {
+      const reader = new FileReader();
+      const resumeBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(resume);
+      });
+
+      const response = await fetch(`/api/jobs/${jobId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          currentLocation: formData.currentLocation,
+          linkedin: formData.linkedIn,
+          portfolio: formData.portfolio,
+          coverLetter: formData.coverLetter,
+          customAnswers,
+          knockoutAnswers,
+          veteranStatus: formData.veteranStatus,
+          disability: formData.disability,
+          gender: formData.gender,
+          race: formData.race,
+          resumeData: {
+            name: resume.name,
+            size: resume.size,
+            type: resume.type,
+            data: resumeBase64,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        setIsSubmitted(true);
+      } else {
+        const error = await response.json();
+        alert(`Failed to submit application: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      alert('Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Company not found</h1>
-          <Link href="/" className="text-slate-600 hover:text-slate-900">
-            Go back
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-3" />
+          <p className="text-[15px] text-slate-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-[32px] font-semibold text-slate-900 mb-3 tracking-tight">
+            Job not found
+          </h1>
+          <Link href={companySlug ? `/jobs/${companySlug}` : '/'} className="text-[15px] text-slate-600 hover:text-slate-900 transition-colors font-medium">
+            {companySlug ? 'Back to all jobs' : 'Go back'}
           </Link>
         </div>
       </div>
     );
   }
 
-  if (!job) {
+  const company = job.company;
+
+  // Success state
+  if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Job not found</h1>
-          <Link href={`/jobs/${companySlug}`} className="text-slate-600 hover:text-slate-900">
-            Back to all jobs
-          </Link>
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-10 shadow-sm">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={32} className="text-emerald-600" strokeWidth={2} />
+            </div>
+            <h1 className="text-[28px] font-semibold text-slate-900 mb-3 tracking-tight">
+              Application submitted
+            </h1>
+            <p className="text-[15px] text-slate-600 mb-8 leading-relaxed">
+              Thank you for applying. The hiring team will review your application and be in touch soon.
+            </p>
+            <Link
+              href={`/jobs/${companySlug}`}
+              className="inline-block bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all text-[15px] font-semibold"
+            >
+              Back to all jobs
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-6 py-6">
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b border-slate-200/60 bg-white">
+        <div className="max-w-7xl mx-auto px-8 py-8">
           <Link
-            href={`/jobs/${companySlug}`}
-            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 mb-4"
+            href={`/jobs/${company.slug}`}
+            className="inline-flex items-center gap-2 text-[14px] text-slate-600 hover:text-slate-900 mb-6 transition-colors font-medium"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} strokeWidth={2.5} />
             Back to all jobs at {company.name}
           </Link>
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">{job.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 text-slate-600">
-            <div className="flex items-center gap-1.5">
-              <MapPin size={18} className="text-slate-400" />
-              <span>{job.location}</span>
+          <h1 className="text-[42px] font-semibold text-slate-900 mb-6 tracking-tight leading-tight">{job.title}</h1>
+          <div className="flex flex-wrap items-center gap-6 text-slate-600 text-[15px]">
+            <div className="flex items-center gap-2.5">
+              <MapPin size={18} className="text-slate-400" strokeWidth={2} />
+              <span className="font-medium">{job.location}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Briefcase size={18} className="text-slate-400" />
-              <span>{job.type}</span>
+            <div className="flex items-center gap-2.5">
+              <Briefcase size={18} className="text-slate-400" strokeWidth={2} />
+              <span className="font-medium">{job.type}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <DollarSign size={18} className="text-slate-400" />
-              <span>{job.salary}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar size={18} className="text-slate-400" />
-              <span>Posted {job.posted}</span>
-            </div>
+            {job.salary && (
+              <div className="flex items-center gap-2.5">
+                <DollarSign size={18} className="text-slate-400" strokeWidth={2} />
+                <span className="font-medium">{job.salary}</span>
+              </div>
+            )}
+            {job.posted && (
+              <div className="flex items-center gap-2.5">
+                <Calendar size={18} className="text-slate-400" strokeWidth={2} />
+                <span className="font-medium">Posted {job.posted}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">About the role</h2>
-              <p className="text-slate-700 leading-relaxed">{job.fullDescription}</p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Responsibilities</h2>
-              <ul className="space-y-3">
-                {job.responsibilities.map((item: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-3 text-slate-700">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Requirements</h2>
-              <ul className="space-y-3">
-                {job.requirements.map((item: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-3 text-slate-700">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Nice to have</h2>
-              <ul className="space-y-3">
-                {job.niceToHave.map((item: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-3 text-slate-700">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-6">
-              <Link
-                href={`/jobs/${companySlug}/${job.id}/apply`}
-                className="block w-full bg-slate-900 text-white text-center px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors font-medium mb-4"
-              >
-                Apply for this position
-              </Link>
-              <div className="text-sm text-slate-600 space-y-2">
-                <p>
-                  <span className="font-medium text-slate-900">Company:</span> {company.name}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-900">Department:</span> {job.department}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-900">Location:</span> {job.location}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-900">Employment:</span> {job.type}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-900">Salary:</span> {job.salary}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Main Content */}
+      <main className="px-8 py-12">
+        <JobApplicationView
+          job={job}
+          isPreview={false}
+          onSubmit={handleApplicationSubmit}
+          isSubmitting={isSubmitting}
+        />
       </main>
 
-      <footer className="bg-white border-t border-slate-200 mt-20">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <p className="text-sm text-slate-600 text-center">
-            © 2025 {company.name}. Powered by Better ATS.
+      {/* Footer */}
+      <footer className="border-t border-slate-200/60 bg-white mt-20">
+        <div className="max-w-7xl mx-auto px-8 py-10">
+          <p className="text-[14px] text-slate-600 text-center font-medium">
+            © 2025 {company.name}. All rights reserved.
+          </p>
+          <p className="text-[13px] text-slate-400 mt-2 text-center">
+            Powered by <span className="font-semibold text-slate-600">Better ATS</span>
           </p>
         </div>
       </footer>

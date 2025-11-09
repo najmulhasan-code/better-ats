@@ -3,10 +3,17 @@
 import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search } from 'lucide-react';
-import { mockJobs, mockCandidates, PIPELINE_STAGES } from '@/lib/mockData';
-import { CURRENT_COMPANY } from '@/lib/auth';
-import { candidateStore } from '@/lib/candidateStore';
-import { jobStore } from '@/lib/jobStore';
+import { useCurrentCompany } from '@/lib/auth/hooks';
+
+// Pipeline stages constant
+const PIPELINE_STAGES = [
+  { id: 'applied', name: 'New Applicants', color: 'slate' },
+  { id: 'screening', name: 'Screening', color: 'blue' },
+  { id: 'interview', name: 'Interview', color: 'purple' },
+  { id: 'offer', name: 'Offer', color: 'green' },
+  { id: 'hired', name: 'Hired', color: 'emerald' },
+  { id: 'rejected', name: 'Rejected', color: 'red' },
+];
 
 interface CandidatesPageProps {
   params: Promise<{
@@ -16,31 +23,79 @@ interface CandidatesPageProps {
 
 export default function JobCandidatesPage({ params }: CandidatesPageProps) {
   const { jobId } = use(params);
-  const [newCandidates, setNewCandidates] = useState<any[]>([]);
+  const { company, loading } = useCurrentCompany();
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [job, setJob] = useState<any>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Load new candidates from localStorage on mount
+  // Fetch job and candidates from API
   useEffect(() => {
-    const stored = candidateStore.getByJob(jobId, CURRENT_COMPANY.slug);
-    setNewCandidates(stored);
-  }, [jobId]);
+    async function fetchData() {
+      if (!company?.slug) return;
 
-  const handleStageChange = (candidateId: string, newStage: string) => {
-    candidateStore.updateStage(candidateId, newStage);
-    // Reload candidates
-    const stored = candidateStore.getByJob(jobId, CURRENT_COMPANY.slug);
-    setNewCandidates(stored);
+      setDataLoading(true);
+      try {
+        // Fetch job details
+        const jobResponse = await fetch(`/api/jobs/${jobId}`);
+        if (jobResponse.ok) {
+          const jobData = await jobResponse.json();
+          setJob(jobData.job);
+        }
+
+        // Fetch candidates for this job
+        const candidatesResponse = await fetch(`/api/dashboard/jobs/${jobId}/candidates`);
+        if (candidatesResponse.ok) {
+          const candidatesData = await candidatesResponse.json();
+          setCandidates(candidatesData.candidates || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [jobId, company?.slug]);
+
+  const handleStageChange = async (candidateId: string, newStage: string) => {
+    if (!company?.slug) return;
+
+    // Optimistically update UI
+    setCandidates(prev =>
+      prev.map(c => c.id === candidateId ? { ...c, stage: newStage } : c)
+    );
+
+    try {
+      // Update candidate stage in database
+      const response = await fetch(`/api/dashboard/candidates/${candidateId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stage: newStage }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update candidate stage');
+      }
+    } catch (error) {
+      console.error('Error updating candidate stage:', error);
+      // Revert optimistic update on error
+      setCandidates(prev =>
+        prev.map(c => c.id === candidateId ? { ...c, stage: c.stage } : c)
+      );
+      alert('Failed to update candidate stage. Please try again.');
+    }
   };
 
-  // Check both localStorage and mock jobs
-  const storedJob = jobStore.getById(jobId);
-  const mockJob = mockJobs.find((j) => j.id === jobId && j.companySlug === CURRENT_COMPANY.slug);
-  const job = storedJob || mockJob;
+  if (loading || dataLoading) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Loading...</div></div>;
+  }
 
-  // Merge mock candidates with new ones from localStorage
-  const mockCandidatesForJob = mockCandidates.filter(
-    (c) => c.jobId === jobId && c.companySlug === CURRENT_COMPANY.slug
-  );
-  const candidates = [...newCandidates, ...mockCandidatesForJob];
+  if (!company) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="text-slate-600">Please sign in to view candidates</div></div>;
+  }
 
   if (!job) {
     return (
@@ -74,8 +129,8 @@ export default function JobCandidatesPage({ params }: CandidatesPageProps) {
       </div>
 
       {/* Pipeline Stats */}
-      <div className="grid grid-cols-5 gap-3">
-        {PIPELINE_STAGES.filter(s => s.id !== 'rejected').map((stage) => {
+      <div className="grid grid-cols-6 gap-3">
+        {PIPELINE_STAGES.map((stage) => {
           const count = candidates.filter(c => c.stage === stage.id).length;
           return (
             <div key={stage.id} className="bg-white border border-slate-200 rounded-lg p-4">
@@ -124,7 +179,7 @@ export default function JobCandidatesPage({ params }: CandidatesPageProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {candidate.skillMatch.slice(0, 5).map((skill) => (
+                    {candidate.skillMatch.slice(0, 5).map((skill: string) => (
                       <span
                         key={skill}
                         className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded"

@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth.server';
+import { getOrCreateUser } from '@/lib/auth/user';
 import { NextResponse } from 'next/server';
 
 /**
@@ -94,12 +94,13 @@ async function handleCallback(request: Request) {
 
     if (code) {
       const supabase = await createClient();
-      
-      // Exchange code for session (Supabase handles this automatically)
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+      // Exchange code for session
+      console.log('[Auth Callback] Exchanging code for session...');
+      const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
-        console.error('Error exchanging code for session:', exchangeError);
+        console.error('[Auth Callback] Exchange error:', exchangeError);
         return NextResponse.redirect(
           new URL(
             `/login?error=${encodeURIComponent(exchangeError.message)}`,
@@ -108,7 +109,26 @@ async function handleCallback(request: Request) {
         );
       }
 
-      // Successfully authenticated, redirect to dashboard
+      console.log('[Auth Callback] Session created successfully');
+
+      // Get the authenticated user from the session data
+      const supabaseUser = data?.user;
+
+      if (supabaseUser) {
+        try {
+          // Get or create user in our database
+          await getOrCreateUser(supabaseUser);
+        } catch (error: any) {
+          // If user needs onboarding, redirect there
+          if (error.message === 'USER_NEEDS_ONBOARDING') {
+            return NextResponse.redirect(new URL('/onboarding', request.url));
+          }
+          // Other errors - log and continue (user still authenticated in Supabase)
+          console.error('Error creating user profile:', error);
+        }
+      }
+
+      // Successfully authenticated, redirect to destination
       return NextResponse.redirect(new URL(next, request.url));
     }
 
@@ -124,11 +144,12 @@ async function handleCallback(request: Request) {
 
 /**
  * GET /api/auth/user
- * Returns the currently authenticated user
+ * Returns the currently authenticated user with company information
  */
 async function handleGetUser() {
   try {
-    const user = await getCurrentUser();
+    const { getCurrentUserWithCompany } = await import('@/lib/auth/server');
+    const user = await getCurrentUserWithCompany();
 
     if (!user) {
       return NextResponse.json(
@@ -177,10 +198,10 @@ async function handleSignOut() {
 
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  const slug = params.slug?.[0] || '';
-  const url = new URL(request.url);
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug?.[0] || '';
 
   // Route based on slug
   switch (slug) {
@@ -203,9 +224,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  const slug = params.slug?.[0] || '';
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug?.[0] || '';
 
   // Route based on slug
   switch (slug) {

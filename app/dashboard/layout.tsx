@@ -11,7 +11,7 @@ export default function DashboardLayout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#fafafa]">
+    <div className="flex h-screen bg-slate-50">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -21,9 +21,9 @@ export default function DashboardLayout({
       <main
         className={`${
           isSidebarCollapsed ? 'ml-20' : 'ml-64'
-        } flex-1 overflow-y-auto transition-all duration-300 ease-in-out`}
+        } flex-1 overflow-y-auto transition-all duration-300`}
       >
-        <div className="p-6 max-w-7xl">
+        <div className="p-6 max-w-[1600px]">
           {children}
         </div>
       </main>
