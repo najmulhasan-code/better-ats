@@ -180,7 +180,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           {!isCollapsed && (
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-white truncate">
-                Najmul Hasan
+                Profile
               </p>
               <p className="text-xs text-slate-400 truncate">Admin</p>
             </div>
