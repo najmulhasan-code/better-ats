@@ -35,7 +35,7 @@
   <a href="https://www.youtube.com/watch?v=dGjOEzMp-AQ" target="_blank">
     <img src="https://img.youtube.com/vi/dGjOEzMp-AQ/maxresdefault.jpg" alt="Watch BetterATS Introduction Video" width="700" style="border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"/>
   </a>
-  <p><em>▶️ Click to watch our introduction video on YouTube</em></p>
+  <p><em>Click to watch our introduction video on YouTube</em></p>
 </div>
 
 <br/>
@@ -64,7 +64,7 @@ betterATS leverages advanced AI to perform semantic analysis of entire applicati
 - **Framework**: Next.js 16, React 19, TypeScript
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Supabase Auth
-- **AI**: Anthropic Claude & OpenAI
+- **Model**: Anthropic Claude & OpenAI GPT
 - **Storage**: Supabase Storage for resume PDFs
 - **Styling**: Tailwind CSS
 
@@ -74,7 +74,7 @@ betterATS leverages advanced AI to perform semantic analysis of entire applicati
 
 - Node.js 20+
 - PostgreSQL database
-- Supabase account (for authentication and storage)
+- Supabase (for authentication, database and storage)
 - Anthropic API key or OpenAI API key
 
 ### Installation
@@ -129,3 +129,4 @@ npm start
 ## License
 
 MIT License
+
