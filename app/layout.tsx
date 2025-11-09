@@ -9,8 +9,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Better ATS - Modern Applicant Tracking System",
-  description: "AI-native applicant tracking system for modern recruiting teams",
+  title: "BetterATS",
+  description: "AI-Powered Applicant Tracking System - Hire Talent, not Template",
+  icons: {
+    icon: '/BetterATS_Fevicon.png',
+  },
 };
 
 export default function RootLayout({

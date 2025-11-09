@@ -51,21 +51,15 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        console.log('Fetching dashboard stats...');
         const response = await fetch('/api/dashboard/stats');
-        console.log('Response status:', response.status);
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Dashboard data:', data);
           setCompanyJobs(data.jobs || []);
           setCompanyCandidates(data.candidates || []);
-        } else {
-          const error = await response.json();
-          console.error('API error:', error);
         }
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        // Silently handle error - could add toast notification here
       } finally {
         setIsLoading(false);
       }
