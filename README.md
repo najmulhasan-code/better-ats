@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="./public/logos/better-ats-logo.png" alt="BetterATS Logo" width="200" style="margin-bottom: 20px;"/>
-
-# BetterATS
+<img src="./public/logos/better-ats-logo-for-github.png" alt="BetterATS Logo" width="400" style="margin-bottom: 30px;"/>
 
 ### AI-Powered Applicant Tracking System
 **Hire for talent and potential, not just keywords.**
@@ -34,10 +32,10 @@
 ## Introduction
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=dGjOEzMp-AQ">
-    <img src="https://img.youtube.com/vi/dGjOEzMp-AQ/maxresdefault.jpg" alt="BetterATS Introduction Video" width="700" style="border-radius: 10px;"/>
+  <a href="https://www.youtube.com/watch?v=dGjOEzMp-AQ" target="_blank">
+    <img src="https://img.youtube.com/vi/dGjOEzMp-AQ/maxresdefault.jpg" alt="Watch BetterATS Introduction Video" width="700" style="border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"/>
   </a>
-  <p><em>Click to watch our introduction video</em></p>
+  <p><em>▶️ Click to watch our introduction video on YouTube</em></p>
 </div>
 
 <br/>
