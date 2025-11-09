@@ -91,7 +91,7 @@ model Candidate {
   portfolio            String?
   appliedDate          String                @map("applied_date")
   appliedDateTimestamp BigInt                @map("applied_date_timestamp")
-  aiScore              Int                   @map("ai_score")
+  aiScore              Int                   @default(0) @map("ai_score")
   stage                String                @default("applied")
   jobTitle             String                @map("job_title")
   matchReasons         String[]              @default([]) @map("match_reasons")
@@ -101,6 +101,30 @@ model Candidate {
   education            String?
   resumeFile           String?               @map("resume_file")
   coverLetter          String?               @map("cover_letter")
+  
+  // Analysis Scores (from integration.ts)
+  resumeScore          Float?                @map("resume_score")
+  questioneryScore     Float?                @map("questionery_score")
+  finalScore           Float?                @map("final_score")
+  
+  // Analysis Data (from integration.ts)
+  resumeAnalysisData   String?               @db.Text @map("resume_analysis_data")
+  questioneryAnalysisData String?            @db.Text @map("questionery_analysis_data")
+  hiringRecommendation String?               @map("hiring_recommendation")
+  comprehensiveAnalysis String?              @db.Text @map("comprehensive_analysis")
+  overallStrengths     String[]              @default([]) @map("overall_strengths")
+  overallWeaknesses    String[]              @default([]) @map("overall_weaknesses")
+  recommendations      String[]              @default([]) @map("recommendations")
+  
+  // Parsed Resume Data (from resume.ts - ParsedResumeData)
+  parsedResumeData     Json?                 @map("parsed_resume_data")
+  resumeSkills         String[]              @default([]) @map("resume_skills")
+  resumeCertifications String[]              @default([]) @map("resume_certifications")
+  
+  // Analysis Metadata
+  analyzedAt           DateTime?             @map("analyzed_at")
+  analysisMethod       String?               @map("analysis_method")
+  
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   applicationResponses ApplicationResponse[]
@@ -111,6 +135,8 @@ model Candidate {
   @@index([jobId])
   @@index([stage])
   @@index([email])
+  @@index([finalScore])
+  @@index([analyzedAt])
   @@map("candidates")
 }
 
