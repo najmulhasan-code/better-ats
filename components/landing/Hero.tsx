@@ -225,12 +225,23 @@ export default function Hero() {
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-5xl mx-auto">
-            {/* Main Heading with animated glow */}
-            <div className="mb-8 animate-fade-in-up">
-              <h1 className="text-7xl sm:text-8xl lg:text-9xl font-bold mb-4 leading-tight tracking-tight relative">
+          {/* Two Column Layout - Team GIF and Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
+            
+            {/* Left Side - Content */}
+            <div className="order-1 lg:order-1 text-center lg:text-left">
+              {/* Small badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 animate-fade-in-up" style={{ background: 'rgba(83, 113, 254, 0.1)', color: '#5371FE' }}>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                AI-Native ATS
+              </div>
+
+              {/* Main Heading */}
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <span 
-                  className="relative z-10 animate-text-shimmer inline-block"
+                  className="inline-block animate-text-shimmer"
                   style={{ 
                     background: 'linear-gradient(to right, #5371FE, #8B5CF6, #5371FE)',
                     WebkitBackgroundClip: 'text',
@@ -239,116 +250,169 @@ export default function Hero() {
                     color: 'transparent',
                   }}
                 >
-                  Better ATS
+                  betterATS
                 </span>
-                <span 
-                  className="absolute inset-0 text-7xl sm:text-8xl lg:text-9xl font-bold blur-xl opacity-50 animate-pulse-slow pointer-events-none" 
+              </h1>
+
+              {/* Tagline */}
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-700 mb-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                Hire Talent, Not Template
+              </p>
+              
+              {/* Description */}
+              <p className="text-base sm:text-lg text-slate-600 mb-8 leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                Transform how you discover, evaluate, and hire exceptional talent with our AI-native applicant tracking system that goes beyond keywords to understand potential.
+              </p>
+
+              {/* Feature Pills */}
+              <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#5371FE' }}></div>
+                  <span className="text-sm font-medium text-slate-700">AI-Powered Matching</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#8B5CF6' }}></div>
+                  <span className="text-sm font-medium text-slate-700">Resume Management</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#5371FE' }}></div>
+                  <span className="text-sm font-medium text-slate-700">Smart Analytics</span>
+                </div>
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+                <Link 
+                  href="/login"
+                  className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-white text-base font-semibold rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
                   style={{ 
-                    background: 'linear-gradient(to right, rgba(83, 113, 254, 0.6), rgba(139, 92, 246, 0.6), rgba(83, 113, 254, 0.6))',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
+                    background: 'linear-gradient(to right, #5371FE, #8B5CF6)',
+                    boxShadow: '0 20px 25px -5px rgba(83, 113, 254, 0.3), 0 10px 10px -5px rgba(83, 113, 254, 0.2)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 25px 30px -5px rgba(83, 113, 254, 0.4), 0 15px 15px -5px rgba(83, 113, 254, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(83, 113, 254, 0.3), 0 10px 10px -5px rgba(83, 113, 254, 0.2)';
                   }}
                 >
-          Better ATS
-                </span>
-        </h1>
-              <div className="h-1 w-32 mx-auto rounded-full mb-6 animate-expand-width" style={{ background: 'linear-gradient(to right, #5371FE, #8B5CF6)' }}></div>
-            </div>
+                  Get Started
+                  <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
 
-            {/* Tagline */}
-            <p className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-slate-700 mb-4 tracking-tight animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              Hire Talent, Not Template
-            </p>
-            
-            {/* Subtitle */}
-            <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              AI-Native Applicant Tracking System that transforms how you discover, evaluate, and hire exceptional talent
-            </p>
-
-            {/* 3D Feature Cards */}
-            <div 
-              ref={cardRef}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 max-w-5xl mx-auto transition-transform duration-300 ease-out animate-fade-in-up"
-              style={{ transformStyle: 'preserve-3d', animationDelay: '0.6s' }}
-            >
-              <div className="group relative bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 overflow-hidden" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
-                <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(to bottom right, rgba(83, 113, 254, 0.12), rgba(139, 92, 246, 0.12))' }}></div>
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#5371FE] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="w-20 h-20 mb-6 flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 rounded-2xl p-3" style={{ background: 'linear-gradient(135deg, rgba(83, 113, 254, 0.15), rgba(139, 92, 246, 0.15))' }}>
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#5371FE' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-[#5371FE] transition-colors duration-300">AI-Powered</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">Intelligent candidate matching and evaluation</p>
-                </div>
-              </div>
-
-              <div className="group relative bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 overflow-hidden" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(to bottom right, rgba(139, 92, 246, 0.12), rgba(83, 113, 254, 0.12))' }}></div>
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#8B5CF6] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="w-18 h-18 mb-6 flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 rounded-2xl p-3" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(83, 113, 254, 0.15))' }}>
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#8B5CF6' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-[#8B5CF6] transition-colors duration-300">Smart Hiring</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">Find the perfect fit beyond keywords</p>
-                </div>
-              </div>
-
-              <div className="group relative bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 overflow-hidden" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
-                <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'linear-gradient(to bottom right, rgba(83, 113, 254, 0.12), rgba(139, 92, 246, 0.12))' }}></div>
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#5371FE] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10 flex flex-col items-center text-center">
-                  <div className="w-20 h-20 mb-6 flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 rounded-2xl p-3" style={{ background: 'linear-gradient(135deg, rgba(83, 113, 254, 0.15), rgba(139, 92, 246, 0.15))' }}>
-                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#5371FE' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-[#5371FE] transition-colors duration-300">Lightning Fast</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">Streamlined workflow for recruiters</p>
-                </div>
-              </div>
-            </div>
-
-            {/* CTA Button */}
         <Link 
-              href="/login"
-              className="group relative inline-block px-10 py-5 text-white text-lg font-semibold rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 animate-fade-in-up"
-              style={{ 
-                animationDelay: '0.8s',
-                background: 'linear-gradient(to right, #5371FE, #8B5CF6, #5371FE)',
-                boxShadow: '0 20px 25px -5px rgba(83, 113, 254, 0.3), 0 10px 10px -5px rgba(83, 113, 254, 0.2)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 25px 30px -5px rgba(83, 113, 254, 0.4), 0 15px 15px -5px rgba(83, 113, 254, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(83, 113, 254, 0.3), 0 10px 10px -5px rgba(83, 113, 254, 0.2)';
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-2">
-          Get Started
-                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </span>
-              <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, rgba(83, 113, 254, 0.9), rgba(139, 92, 246, 0.9), rgba(83, 113, 254, 0.9))' }}></div>
+                  href="#features"
+                  className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-slate-700 text-base font-semibold rounded-xl bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}
+        >
+                  Learn More
+                  <svg className="w-5 h-5 transform group-hover:translate-y-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
         </Link>
+              </div>
 
-            {/* Trust indicators */}
-            <div className="mt-16 pt-12 border-t animate-fade-in-up" style={{ animationDelay: '1s', borderColor: 'rgba(83, 113, 254, 0.2)' }}>
-              <p className="text-sm text-slate-500 mb-4">Developed by AI@UNCP Team of UNC Pembroke</p>
-              <div className="flex justify-center items-center gap-8 opacity-60">
-                <div className="text-2xl font-bold text-slate-400">AI-First</div>
-                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                <div className="text-2xl font-bold text-slate-400">Data-Driven</div>
-                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                <div className="text-2xl font-bold text-slate-400">Future-Ready</div>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-slate-200 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                <div>
+                  <div className="text-3xl font-bold mb-1" style={{ background: 'linear-gradient(to right, #5371FE, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>10x</div>
+                  <div className="text-xs text-slate-600">Faster Hiring</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold mb-1" style={{ background: 'linear-gradient(to right, #5371FE, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>95%</div>
+                  <div className="text-xs text-slate-600">Accuracy Rate</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold mb-1" style={{ background: 'linear-gradient(to right, #5371FE, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>50%</div>
+                  <div className="text-xs text-slate-600">Time Saved</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Team GIF */}
+            <div className="order-2 lg:order-2 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="relative group">
+                {/* Glow effect behind GIF */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#5371FE]/20 to-[#8B5CF6]/20 rounded-3xl blur-3xl group-hover:blur-2xl transition-all duration-500"></div>
+                
+                {/* GIF Container */}
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl group-hover:scale-[1.02] transition-all duration-500" style={{ border: '2px solid rgba(83, 113, 254, 0.3)' }}>
+                  <Image
+                    src="/team.gif"
+                    alt="BetterATS Team"
+                    width={600}
+                    height={450}
+                    className="w-full h-auto"
+                    unoptimized
+                    priority
+                  />
+                  
+                  {/* Subtle overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none"></div>
+                  
+                  {/* Team Badge - Compact */}
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md rounded-xl px-4 py-2 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #5371FE, #8B5CF6)' }}>
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-sm font-bold text-slate-800">Team betterATS</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature Cards Below - Horizontal Layout */}
+          <div 
+            ref={cardRef}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20 max-w-6xl mx-auto transition-transform duration-300 ease-out animate-fade-in-up"
+            style={{ transformStyle: 'preserve-3d', animationDelay: '0.8s' }}
+          >
+            <div className="group relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl group-hover:scale-110 transition-transform duration-300" style={{ background: 'linear-gradient(135deg, rgba(83, 113, 254, 0.15), rgba(139, 92, 246, 0.15))' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#5371FE' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">AI-Powered</h3>
+                  <p className="text-sm text-slate-600">Intelligent matching beyond keywords</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="group relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl group-hover:scale-110 transition-transform duration-300" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(83, 113, 254, 0.15))' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#8B5CF6' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Smart Hiring</h3>
+                  <p className="text-sm text-slate-600">Find perfect fits effortlessly</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="group relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2" style={{ border: '1px solid rgba(83, 113, 254, 0.2)' }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl group-hover:scale-110 transition-transform duration-300" style={{ background: 'linear-gradient(135deg, rgba(83, 113, 254, 0.15), rgba(139, 92, 246, 0.15))' }}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#5371FE' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Lightning Fast</h3>
+                  <p className="text-sm text-slate-600">Streamlined workflow for teams</p>
+                </div>
               </div>
             </div>
           </div>
