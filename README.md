@@ -1,6 +1,46 @@
-# betterATS
+<div align="center">
 
-**AI-native applicant tracking system that understands candidate potential, not just keywords.**
+<img src="./public/logos/better-ats-logo.png" alt="BetterATS Logo" width="200" style="margin-bottom: 20px;"/>
+
+# BetterATS
+
+### AI-Powered Applicant Tracking System
+**Hire for talent and potential, not just keywords.**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+[![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <a href="#key-features"><strong>Features</strong></a> •
+  <a href="#technology-stack"><strong>Tech Stack</strong></a> •
+  <a href="#getting-started"><strong>Getting Started</strong></a> •
+  <a href="#development"><strong>Development</strong></a> •
+  <a href="#license"><strong>License</strong></a>
+</p>
+
+</div>
+
+---
+
+<br/>
+
+## Introduction
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=dGjOEzMp-AQ">
+    <img src="https://img.youtube.com/vi/dGjOEzMp-AQ/maxresdefault.jpg" alt="BetterATS Introduction Video" width="700" style="border-radius: 10px;"/>
+  </a>
+  <p><em>Click to watch our introduction video</em></p>
+</div>
+
+<br/>
 
 betterATS revolutionizes recruiting by replacing outdated keyword matching with semantic AI analysis. Our platform uses large language models to comprehensively analyze resumes, cover letters, and application responses against job requirements, providing recruiters with intelligent candidate rankings based on true fit and potential rather than resume buzzwords.
 
@@ -26,7 +66,7 @@ betterATS leverages advanced AI to perform semantic analysis of entire applicati
 - **Framework**: Next.js 16, React 19, TypeScript
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Supabase Auth
-- **AI**: Anthropic Claude & OpenAI (with automatic fallback)
+- **AI**: Anthropic Claude & OpenAI
 - **Storage**: Supabase Storage for resume PDFs
 - **Styling**: Tailwind CSS
 
