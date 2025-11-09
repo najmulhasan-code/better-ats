@@ -60,7 +60,7 @@ export async function analyzeApplication(
   if (!application.jobPosting && !application.job) {
     throw new Error('Job posting not found');
   }
-
+  
   // Get job posting with application form
   const jobPosting = application.jobPosting || application.job;
   
@@ -110,10 +110,19 @@ export async function analyzeApplication(
     }
   }
   
-  // Ensure we have at least raw text
-  if (!resumeData.rawText && resumeData.skills?.length === 0 && resumeData.experience?.length === 0) {
+  // Check if resume was successfully parsed - validate we have meaningful content
+  const hasValidResume = resumeData.rawText && resumeData.rawText.trim().length > 50; // At least 50 characters of text
+  const hasStructuredData = (resumeData.skills && resumeData.skills.length > 0) || 
+                            (resumeData.experience && resumeData.experience.length > 0) ||
+                            (resumeData.education && resumeData.education.length > 0);
+  
+  // Only throw error if we truly have no content at all
+  if (!hasValidResume && !hasStructuredData) {
     throw new Error('Failed to parse resume: no text content extracted');
   }
+  
+  // Store resume validation status for later use in analysis
+  const resumeIsValid = hasValidResume || hasStructuredData;
 
   // Get questionery data
   console.log(`Getting questionery data for candidate ${applicationId}...`);
@@ -161,7 +170,8 @@ export async function analyzeApplication(
       jobRequirements,
       jobResponsibilities,
       privateDirections,
-      jobWithForm?.applicationForm
+      jobWithForm?.applicationForm,
+      resumeIsValid // Pass validation status to LLM
     );
   } catch (error: any) {
     // Error handling is now done in the unified LLM client
@@ -169,8 +179,8 @@ export async function analyzeApplication(
     console.error('[Integration] Analysis failed:', error);
     throw error;
   }
-
-    // Store analysis results in database
+  
+  // Store analysis results in database
   try {
     console.log(`Storing analysis results for candidate ${applicationId}...`);
     
@@ -191,9 +201,30 @@ export async function analyzeApplication(
     const remarksText = analysis.recruiterRemarks?.toLowerCase() || '';
     const combinedText = weaknessText + ' ' + remarksText;
     
-    // Check for critical issues - use comprehensive pattern matching
-    // NOTE: Visa sponsorship is NOT automatically a critical issue - only if private directions specify otherwise
-    const hasCorruptedResume = /corrupted|unreadable|cannot verify|impossible to verify|completely corrupted|making it impossible/i.test(combinedText);
+    // Check if resume is truly corrupted (has no usable content)
+    // IMPORTANT: Resume is ONLY corrupted if it has ZERO usable content
+    // Do NOT flag as corrupted for: poor formatting, missing details, sparse content, hard to read, incomplete information
+    
+    // Technical check: Did resume parsing completely fail (no content extracted at all)?
+    const resumeHasNoContent = !resumeData.rawText || resumeData.rawText.trim().length < 50;
+    const resumeHasNoStructuredData = (!resumeData.skills || resumeData.skills.length === 0) && 
+                                      (!resumeData.experience || resumeData.experience.length === 0) &&
+                                      (!resumeData.education || resumeData.education.length === 0);
+    const isTechnicallyCorrupted = resumeHasNoContent && resumeHasNoStructuredData;
+    
+    // LLM analysis check: Does LLM explicitly say resume has NO usable content?
+    // Only match very specific patterns that indicate TRUE corruption (completely unreadable, no content)
+    // STRICT: Only flag if LLM says resume has ZERO usable information
+    // Do NOT match these (these are quality issues, not corruption):
+    //   - "hard to read", "poorly formatted", "missing information", "incomplete", "sparse"
+    //   - "cannot verify", "unclear", "difficult to parse", "limited information"
+    const llmSaysCorrupted = /(?:completely|totally).*(?:corrupted|unreadable|blank|empty)|no.*usable.*content|(?:cannot|could not).*extract.*(?:any|any useful|any meaningful).*information|zero.*(?:content|information|data)|(?:only|entirely|completely).*gibberish|(?:completely|totally).*nonsensical|(?:completely|totally).*unparseable|no.*(?:readable|extractable|usable).*content|resume.*(?:is|was).*(?:completely|totally).*(?:blank|empty|corrupted|unreadable)/i.test(combinedText);
+    
+    // Resume is only corrupted if:
+    // 1. Technical parsing completely failed (no content at all), OR
+    // 2. LLM explicitly states resume has ZERO usable content (very strict pattern matching)
+    // This ensures we don't falsely flag resumes that are just poorly formatted or missing some info
+    const hasCorruptedResume = isTechnicallyCorrupted || llmSaysCorrupted;
     const hasWrongCompany = /wrong company|addressing wrong|careless error.*company|addressed.*wrong/i.test(combinedText);
     const lacksRequiredExperience = /lack.*required.*experience|student.*rather than|appears to lack|does not have.*required|lack the required|appears to be a.*student/i.test(combinedText);
     
@@ -432,7 +463,7 @@ export async function analyzeApplication(
       }
     }
     questioneryScore = Math.max(0, Math.min(100, questioneryScore));
-
+    
     await prisma.candidate.update({
       where: { id: applicationId },
       data: {
@@ -575,7 +606,7 @@ export async function getAnalysisResults(applicationId: string): Promise<Integra
     if (candidate.questioneryScore != null && typeof candidate.questioneryScore === 'number' && !isNaN(candidate.questioneryScore)) {
       questioneryScore = candidate.questioneryScore;
     }
-
+    
     return {
       stored: true,
       resumeStrongPoints: Array.isArray(candidate.resumeStrongPoints) ? candidate.resumeStrongPoints : [],

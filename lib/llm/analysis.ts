@@ -37,7 +37,8 @@ export async function analyzeComprehensiveApplication(
   jobRequirements: string[],
   jobResponsibilities: string[],
   privateDirections: string | null,
-  applicationForm?: any
+  applicationForm?: any,
+  resumeIsValid: boolean = true // Whether resume was successfully parsed
 ): Promise<ComprehensiveAnalysisResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY is not set');
@@ -48,6 +49,21 @@ export async function analyzeComprehensiveApplication(
 
   // Format resume data
   const resumeSummary = formatResumeForAnalysis(resumeData);
+  
+  // Check if resume has meaningful content
+  // Only add a note if resume is truly invalid (no content at all)
+  const hasResumeContent = resumeIsValid && (
+    (resumeData.rawText && resumeData.rawText.trim().length > 50) ||
+    (resumeData.skills && resumeData.skills.length > 0) ||
+    (resumeData.experience && resumeData.experience.length > 0) ||
+    (resumeData.education && resumeData.education.length > 0)
+  );
+  
+  // If resume has no meaningful content, note this in the prompt
+  // Only mark as corrupted if it truly has NO content
+  const resumeStatusNote = !hasResumeContent 
+    ? '\n\nIMPORTANT: The resume could not be parsed or contains no readable content. This indicates a corrupted resume with ZERO usable information.'
+    : '';
 
   // Format job requirements and responsibilities
   const requirementsText = Array.isArray(jobRequirements) 
@@ -115,7 +131,7 @@ ${privateDirectionsSection}
 CANDIDATE APPLICATION:
 
 RESUME:
-${resumeSummary}
+${resumeSummary}${resumeStatusNote}
 
 QUESTIONERY (Cover letter + answers + other application info):
 ${questioneryText || 'No questionery data provided (cover letter, custom answers, etc.)'}
@@ -126,6 +142,10 @@ Analyze this candidate's application comprehensively:
 1. Analyze the candidate's RESUME against the job description, requirements, responsibilities, and private directions (if any)
    - Evaluate resume quality, relevance, experience, skills, education
    - Assess how well the resume matches job requirements
+   - IMPORTANT: Only mark resume as "corrupted" or "unreadable" if it truly contains NO usable information
+   - If resume has some content (even if sparse, poorly formatted, or missing some details), it is NOT corrupted
+   - A resume is only corrupted if: it's completely blank, contains only gibberish/nonsensical text, or cannot be parsed at all
+   - Poor formatting, missing information, or incomplete details do NOT make a resume "corrupted"
 2. Analyze the candidate's QUESTIONERY (all non-resume materials: cover letter, custom answers, portfolio links, etc.) against the job description, requirements, responsibilities, and private directions (if any)
    - Evaluate cover letter quality, relevance, communication skills
    - Assess answers to custom questions
@@ -157,8 +177,11 @@ Analyze this candidate's application comprehensively:
 6. Calculate SCORES (0-100):
    - RESUME SCORE: Rate the resume quality and match (0-100) based on resume-specific analysis
      * Consider: skills match, experience relevance, education, resume quality
-     * Penalize heavily for corrupted/unreadable resume (max 40%)
+     * IMPORTANT: Only mark resume as corrupted/unreadable if it has ZERO usable content (completely blank, gibberish, or unparseable)
+     * If resume has any readable content (even if sparse or poorly formatted), it is NOT corrupted - just rate it based on quality
+     * Penalize heavily ONLY for truly corrupted/unreadable resume with NO usable content (max 40%)
      * Penalize for lack of required experience shown in resume (max 50%)
+     * Poor formatting or missing details should reduce score but NOT be marked as "corrupted"
    - QUESTIONERY SCORE: Rate the cover letter and application materials (0-100) based on questionery-specific analysis
      * Consider: cover letter quality, answer relevance, communication skills
      * Penalize heavily for wrong company name (reduce by 25%)
@@ -168,12 +191,14 @@ Analyze this candidate's application comprehensively:
      * This should be a holistic assessment considering BOTH resume and questionery together
      * It may differ from a simple average of resume and questionery scores
    - CRITICAL RULES FOR SCORING (THESE ARE HARD LIMITS - NO EXCEPTIONS):
-     * If candidate has corrupted/unreadable resume: MAXIMUM score is 40%
+     * IMPORTANT: Resume is ONLY corrupted if it has ZERO usable content (completely blank, gibberish, unparseable)
+     * If resume has ANY readable content, it is NOT corrupted - rate based on quality, not corruption
+     * If candidate has TRULY corrupted/unreadable resume (no usable content): MAXIMUM score is 40%
      * If candidate lacks required experience (e.g., student vs 4+ years required): MAXIMUM score is 50%
      * If candidate has wrong company name in application: Reduce score by 20-25% (multiply by 0.75-0.8)
      * If candidate has multiple critical issues (2+): MAXIMUM score is 35%
      * If candidate has 3+ critical issues: MAXIMUM score is 30%
-     * If candidate has corrupted resume AND lacks experience AND wrong company: MAXIMUM score is 25%
+     * If candidate has TRULY corrupted resume (no content) AND lacks experience AND wrong company: MAXIMUM score is 25%
      * If weaknesses outnumber strengths AND there are critical issues: MAXIMUM score is 30%
    - IMPORTANT: Visa sponsorship and relocation are TYPICALLY EXPECTED for many jobs - do NOT automatically penalize for these unless private directions explicitly require otherwise (e.g., "US citizens only", "No visa sponsorship needed")
    - Only penalize visa/relocation if private directions specifically state requirements that conflict with candidate's answers
@@ -198,9 +223,11 @@ IMPORTANT RULES:
 - Be fair and unbiased - focus on qualifications and fit
 - Provide specific, actionable insights
 - Consider overall potential, not just keyword matching
-- CRITICAL: Overall match score must reflect actual fit quality - candidates with critical issues (corrupted resume, wrong company, lack of required experience) should get LOW scores (0-40%)
+- CRITICAL: Resume is ONLY "corrupted" if it has ZERO usable content - do NOT mark as corrupted if it has any readable text, skills, experience, or education
+- CRITICAL: Poor formatting, missing details, or sparse content do NOT make a resume "corrupted" - these are quality issues, not corruption
+- CRITICAL: Overall match score must reflect actual fit quality - candidates with critical issues (TRULY corrupted resume with no content, wrong company, lack of required experience) should get LOW scores (0-40%)
 - CRITICAL: Do NOT give high scores (70%+) to candidates with multiple critical weaknesses
-- CRITICAL: If recruiter remarks mention "critical issues", "cannot verify", "corrupted resume", "wrong company", "lack of required experience", "visa sponsorship", "student status" - the score MUST be low (0-50%)
+- CRITICAL: Only flag "corrupted resume" if resume contains NO usable information - if you can extract ANY skills, experience, education, or readable text, it is NOT corrupted
 - CRITICAL: A candidate with 100% score should have NO critical issues, meet all requirements, and have strong qualifications
 - CRITICAL: Review your recruiter remarks - if they mention problems, the score MUST reflect those problems
 - QUALITY OVER QUANTITY: Only include strong/weak points that are genuinely relevant - don't force points to meet a number
