@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./public/logos/better-ats-logo-for-github.png" alt="BetterATS Logo" width="400" style="margin-bottom: 30px;"/>
+<img src="./public/logos/better-ats-logo-for-github.png" alt="BetterATS Logo" width="550" style="margin-bottom: 30px;"/>
 
 ### AI-Powered Applicant Tracking System
 **Hire for talent and potential, not just keywords.**
@@ -40,21 +40,21 @@
 
 <br/>
 
-betterATS revolutionizes recruiting by replacing outdated keyword matching with semantic AI analysis. Our platform uses large language models to comprehensively analyze resumes, cover letters, and application responses against job requirements, providing recruiters with intelligent candidate rankings based on true fit and potential rather than resume buzzwords.
+betterATS revolutionizes recruiting by replacing outdated keyword matching with semantic AI analysis. Our platform uses large language models to comprehensively analyze resumes, cover letters, and application responses against job requirements, helping recruiters identify the best candidates based on true fit and potential rather than resume buzzwords.
 
 ## The Problem
 
-Traditional ATS systems rely on keyword matching, leading to qualified candidates being overlooked and unqualified ones ranking high. Recruiters spend countless hours manually reviewing applications, and the best candidates often get filtered out by rigid keyword algorithms that can't understand context, experience, or potential.
+Traditional ATS systems rely on keyword matching, leading to qualified candidates being overlooked while less suitable ones pass through. Recruiters spend countless hours manually reviewing applications, and the best candidates often get filtered out by rigid keyword algorithms that can't understand context, experience, or potential.
 
 ## The Solution
 
-betterATS leverages advanced AI to perform semantic analysis of entire applications. The system evaluates candidates holistically - analyzing their resume, cover letter, portfolio, and responses - against job requirements and recruiter-defined private directions. This results in rankings that reflect actual candidate quality and fit, not just keyword density.
+betterATS leverages advanced AI to perform semantic analysis of entire applications. The system evaluates candidates holistically - analyzing their resume, cover letter, portfolio, and responses - against job requirements and recruiter-defined private directions. This provides deep insights into candidate quality and fit, not just keyword density.
 
 ## Key Features
 
 - **Semantic Analysis**: LLM-powered evaluation of resumes, cover letters, and application materials
-- **Intelligent Ranking**: AI-driven candidate sorting based on comprehensive analysis, not keywords
-- **Private Directions**: Recruiters can define hidden filtering criteria that influence rankings
+- **Smart Candidate Evaluation**: AI-driven assessment based on comprehensive analysis, not keywords
+- **Private Directions**: Recruiters can define hidden filtering criteria for deeper candidate insights
 - **Comprehensive Insights**: Detailed strong points, weak points, and recruiter remarks for each candidate
 - **Pipeline Management**: Visual candidate pipeline with drag-and-drop stage management
 - **Custom Application Forms**: Flexible job application forms with custom questions and knockout criteria
